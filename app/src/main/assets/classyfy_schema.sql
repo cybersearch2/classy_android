@@ -1,0 +1,9 @@
+create table models ( _id integer primary key autoincrement, name text, _description text);
+insert into models (name, _description) values ( 'recordCategory', 'Records can be filed in record category. A record category defines how the record is treated during it''s lifecycle');
+insert into models (name, _description) values ( 'recordFolder', 'A record folder is an extension to a file plan. It contains many records which are grouped together. ');
+create table nodes ( _id integer primary key autoincrement, _parent_id integer, name text, title text, model integer, level integer, FOREIGN KEY(_parent_id) REFERENCES nodes(_id), FOREIGN KEY(model) REFERENCES models(_id));
+create table child_nodes ( _id integer primary key autoincrement, _parent integer, _child integer, FOREIGN KEY(_parent) REFERENCES nodes(_id), FOREIGN KEY(_child) REFERENCES nodes(_id));
+create view all_nodes as select n._id as _id, n.name as name, n.title as title, m.name as model from nodes n inner join child_nodes c on c._child = n._id inner join models m on m._id = n.model;
+create table categories ( _id integer primary key autoincrement, node_id integer not null, description text not null, created text not null, creator text not null, modified text, modifier text, identifier not null);
+create table folders ( _id integer primary key autoincrement, node_id integer not null, description text not null, created text not null, creator text not null, modified test, modifier text, identifier not null,
+                       location text, hasDispositionSchedule integer not null, dispositionInstructions text, dispositionAuthority text);

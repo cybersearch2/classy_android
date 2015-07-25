@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence xmlns="http://java.sun.com/xml/ns/persistence"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             version="2.0">
+   <persistence-unit name="simple">
+       <class>au.com.cybersearch2.example.SimpleData</class>
+        <property name="database-name" value="helloTwoDb1.db"/>
+        <property name="database-version" value="1"/>
+   </persistence-unit>
+   <persistence-unit name="complex">
+       <class>au.com.cybersearch2.example.ComplexData</class>
+       <property name="database-name" value="helloTwoDb2.db"/>
+        <property name="database-version" value="1"/>
+   </persistence-unit>
+</persistence>
