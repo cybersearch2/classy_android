@@ -1,16 +1,18 @@
 apply plugin: 'com.android.library'
 apply from: "${rootDir}/classy_tools.gradle"
-
 dependencies {
     provided 'com.squareup.dagger:dagger-compiler:1.2.2'
-
     compile 'com.squareup.dagger:dagger:1.2.2'
-    compile ('com.android.support:appcompat-v7:22.2.+') {
-        exclude group: 'com.android.support', module: 'support-v4' }
-
-    compile ('au.com.cybersearch2:classyandroid:1.12') {
+    compile 'com.android.support:appcompat-v7:22.2.1'
+    compile 'com.android.support:support-v4:22.2.1'
+    compile('au.com.cybersearch2:classyandroid:1.13-SNAPSHOT') {
         exclude group: 'com.j256.ormlite', module: 'ormlite-jdbc'
         exclude group: 'commons-logging', module: 'commons-logging'
         exclude group: 'commons-collections', module: 'commons-collections'
-        exclude group: 'net.sf.kxml', module: 'kxml2' }
+        exclude group: 'net.sf.kxml', module: 'kxml2'
+        exclude group: 'android', module: 'android'
+        exclude group: 'com.android.support', module: 'support-v4'
+        exclude group: 'org.robolectric', module: 'robolectric'
+    }
 }
+
