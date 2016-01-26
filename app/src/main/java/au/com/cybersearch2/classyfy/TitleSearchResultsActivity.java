@@ -21,10 +21,11 @@ import java.util.List;
 
 import javax.inject.Inject;
 
+import android.annotation.TargetApi;
 import android.app.SearchManager;
 import android.content.Intent;
-import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.Loader;
@@ -32,18 +33,15 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.LinearLayout;
-import android.widget.LinearLayout.LayoutParams;
-import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+import au.com.cybersearch2.classyfy.data.Node;
 import au.com.cybersearch2.classyfy.helper.TicketManager;
 import au.com.cybersearch2.classyfy.helper.ViewHelper;
-import au.com.cybersearch2.classyinject.DI;
-import au.com.cybersearch2.classytask.BackgroundTask;
+import au.com.cybersearch2.classyfy.module.ClassyLogicModule;
+import au.com.cybersearch2.classyfy.provider.ClassyFyProvider;
+import au.com.cybersearch2.classytask.AsyncBackgroundTask;
 import au.com.cybersearch2.classywidget.ListItem;
-import au.com.cybersearch2.classywidget.PropertiesListAdapter;
-//import au.com.cybersearch2.classynode.Node;
-//import au.com.cybersearch2.classynode.NodeFinder;
 
 /**
  * TitleSearchResultsActivity
@@ -51,6 +49,7 @@ import au.com.cybersearch2.classywidget.PropertiesListAdapter;
  * @author Andrew Bowley
  * 21/04/2014
  */
+@TargetApi(Build.VERSION_CODES.HONEYCOMB)
 public class TitleSearchResultsActivity extends FragmentActivity
 {
     public static final String TAG = "TitleSearchResults";
@@ -60,11 +59,11 @@ public class TitleSearchResultsActivity extends FragmentActivity
     protected String REFINE_SEARCH_MESSAGE;
     /** Progress spinner fragment */
     protected ProgressFragment progressFragment;
-    @Inject /** Persistence queries to obtain record details */
-    ClassyfyLogic classyfyLogic;
+     
     @Inject /* Intent tracker */
     TicketManager ticketManager;
-
+    @Inject
+    ClassyfyLogic classyfyLogic;
     /**
      * onCreate
      * @see android.support.v4.app.FragmentActivity#onCreate(android.os.Bundle)
@@ -73,11 +72,12 @@ public class TitleSearchResultsActivity extends FragmentActivity
     public void onCreate(Bundle savedInstanceState) 
     {
         super.onCreate(savedInstanceState);
+        ClassyFyApplication classyFyApplication = ClassyFyApplication.getInstance();
+        classyFyApplication.getClassyFyComponent().inject(this);
         setContentView(R.layout.results_list);
         progressFragment = getProgressFragment();
         REFINE_SEARCH_MESSAGE = this.getString(R.string.refine_search);
-        DI.inject(this);
-        // Process intent
+         // Process intent
         parseIntent(getIntent());
     }
 
@@ -141,12 +141,12 @@ public class TitleSearchResultsActivity extends FragmentActivity
         if (uri.getPathSegments().size() < 2)
             errorMessage = "Invalid resource address: \"" + uri.toString() + "\"";
         else
-            try
-            {
-                nodeId = Integer.parseInt(uri.getPathSegments().get(1));
-            }
-            catch (NumberFormatException e)
-            {
+        try
+        {
+            nodeId = Integer.parseInt(uri.getPathSegments().get(1)); 
+        }
+        catch (NumberFormatException e)
+        {
                 errorMessage = "Resource address has invalid ID: \"" + uri.toString() + "\"";
             }
         if (errorMessage != null) {
@@ -156,7 +156,6 @@ public class TitleSearchResultsActivity extends FragmentActivity
         }
         else
             displayNodeDetails(nodeId, ticket);
-
     }
 
     /**
@@ -167,7 +166,8 @@ public class TitleSearchResultsActivity extends FragmentActivity
     protected void launchSearch(final String searchQuery, final int ticket)
     {
         final List<ListItem> resultList = new ArrayList<ListItem>();
-        BackgroundTask queryTask = new BackgroundTask(this)
+        final ClassyFyApplication classyFyApplication = ClassyFyApplication.getInstance();
+        AsyncBackgroundTask queryTask = new AsyncBackgroundTask(classyFyApplication)
         {
             /**
              * Execute task in  background thread
@@ -193,7 +193,7 @@ public class TitleSearchResultsActivity extends FragmentActivity
                         LinearLayout propertiesLayout = (LinearLayout) findViewById(R.id.node_properties);
                         propertiesLayout.addView(createDynamicLayout("Titles", resultList, false));
                     }
-                    if (resultList.size() >= ClassyFyApplication.SEARCH_RESULTS_LIMIT)
+                    if (resultList.size() >= ClassyFyProvider.SEARCH_RESULTS_LIMIT)
                         displayToast(REFINE_SEARCH_MESSAGE);  
                 }
                 if (!success)
@@ -207,7 +207,7 @@ public class TitleSearchResultsActivity extends FragmentActivity
         showTitle("Search: " + searchQuery);
         queryTask.onStartLoading();
     }
-
+    
     protected void showTitle(String title)
     {
         TextView tv1 = (TextView)findViewById(R.id.node_detail_title);
@@ -223,24 +223,26 @@ public class TitleSearchResultsActivity extends FragmentActivity
     protected void displayNodeDetails(final int nodeId, final int ticket)
     {
         progressFragment.showSpinner();
-        BackgroundTask getDetailsTask = new BackgroundTask(this)
+        AsyncBackgroundTask getDetailsTask = new AsyncBackgroundTask(getApplication())
         {
             NodeDetailsBean nodeDetails;
             
             @Override
             public Boolean loadInBackground()
             {
-                nodeDetails = classyfyLogic.getNodeDetails(nodeId);
+                ClassyLogicComponent classyLogicComponent = getClassyLogicComponent(nodeId);
+                nodeDetails = getNodeDetailsBean(classyLogicComponent.node());
                 return nodeDetails != null ? Boolean.TRUE : Boolean.FALSE;
             }
             @Override
             public void onLoadComplete(Loader<Boolean> loader, Boolean success)
             {
                 progressFragment.hideSpinner();
-                String errorMessage = nodeDetails.getErrorMessage();
+                String errorMessage = null;
                 if (success)
                 {
-                     if (errorMessage == null)
+                    errorMessage = nodeDetails.getErrorMessage();
+                    if (errorMessage == null)
                         showRecordDetails(nodeDetails);
                 }
                 else
@@ -252,8 +254,28 @@ public class TitleSearchResultsActivity extends FragmentActivity
                 }
                 ticketManager.removeIntent(ticket);
             }
-       };
-       getDetailsTask.onStartLoading();
+        };
+        getDetailsTask.onStartLoading();
+    }
+
+    protected ClassyLogicComponent getClassyLogicComponent(int nodeId)
+    {
+        ClassyLogicModule classyLogicModule = 
+                new ClassyLogicModule(this, ClassyFyProvider.PU_NAME, nodeId);
+        ClassyFyComponent component = ClassyFyApplication.getInstance().getClassyFyComponent();
+        return component.plus(classyLogicModule );
+    }
+    
+    private NodeDetailsBean getNodeDetailsBean(Node node)
+    {   // Use NodeFinder to perform persistence query
+        if (node == null)
+            return null;
+        // Get first node, which is root of records tree
+        NodeDetailsBean nodeDetails = classyfyLogic.getNodeDetails(node);
+        // TODO - investigate why CategoryTitles is mandatory
+        if ((nodeDetails == null)/* || nodeDetails.getCategoryTitles().isEmpty()*/)
+            return null;
+        return  nodeDetails;
     }
 
     /**

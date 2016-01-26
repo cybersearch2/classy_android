@@ -25,20 +25,16 @@ import java.util.Set;
 
 import android.app.SearchManager;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.database.Cursor;
-import android.util.Log;
-import au.com.cybersearch2.classyapp.ApplicationContext;
 import au.com.cybersearch2.classycontent.SuggestionCursorParameters;
 import au.com.cybersearch2.classyfy.data.FieldDescriptor;
 import au.com.cybersearch2.classyfy.data.FieldDescriptorSetFactory;
 import au.com.cybersearch2.classyfy.data.Node;
-import au.com.cybersearch2.classyfy.data.NodeFinder;
 import au.com.cybersearch2.classyfy.data.RecordModel;
+import au.com.cybersearch2.classyfy.provider.ClassyFyProvider;
 import au.com.cybersearch2.classyfy.provider.ClassyFySearchEngine;
-import au.com.cybersearch2.classyjpa.entity.PersistenceContainer;
 import au.com.cybersearch2.classynode.NodeType;
-import au.com.cybersearch2.classytask.Executable;
-import au.com.cybersearch2.classytask.WorkStatus;
 import au.com.cybersearch2.classywidget.ListItem;
 
 /**
@@ -56,17 +52,14 @@ public class ClassyfyLogic
     public static final String SEARCH_NOT_COMPLETED = "Record search did not complete";
     
     /** Application context provides ContentResolver to access content provider */
-    protected ApplicationContext applicationContext;
-    /** Persistence container to fetch node by id */
-    protected PersistenceContainer persistenceContainer;
+    protected Context context;
 
     /**
      * Create ClassyfyLogic object
      */
-    public ClassyfyLogic()
+    public ClassyfyLogic(Context context)
     {
-        applicationContext = new ApplicationContext();
-        persistenceContainer = new PersistenceContainer(ClassyFyApplication.PU_NAME);
+        this.context = context;
     }
  
     /**
@@ -80,9 +73,9 @@ public class ClassyfyLogic
         SuggestionCursorParameters params = 
                 new SuggestionCursorParameters(searchQuery, 
                                                ClassyFySearchEngine.LEX_CONTENT_URI, 
-                                               ClassyFyApplication.SEARCH_RESULTS_LIMIT); 
+                                               ClassyFyProvider.SEARCH_RESULTS_LIMIT); 
         
-        ContentResolver contentResolver = applicationContext.getContentResolver();
+        ContentResolver contentResolver = context.getContentResolver();
         Cursor cursor = contentResolver.query(
                 params.getUri(), 
                 params.getProjection(), 
@@ -109,39 +102,7 @@ public class ClassyfyLogic
          return fieldList;
     }
 
-    /**
-     * Get node details for node specified by id. Must be executed on background thread.
-     * @param nodeId Node id
-     * @return NodeDetailsBean object
-     */
-    public NodeDetailsBean getNodeDetails(int nodeId)
-    {
-        Node data = getNodeById(nodeId);
-        if (data != null)
-            return getNodeDetails(data);
-        NodeDetailsBean nodeDetailsBean = new NodeDetailsBean();
-        nodeDetailsBean.setErrorMessage(RECORD_NOT_FOUND);
-        return nodeDetailsBean;
-    }
-
-    protected Node getNodeById(int nodeId)
-    {
-        // Use NodeFinder to perform persistence query
-       NodeFinder nodeFinder = getNodeFinder(nodeId);
-       Executable taskHandle = persistenceContainer.executeTask(nodeFinder);
-       // Wait synchronously for task to complete
-       try
-       {
-           taskHandle.waitForTask();
-       }
-       catch (InterruptedException e)
-       {
-           Log.e(TAG, "Fetch node id " + nodeId + ": " + SEARCH_NOT_COMPLETED);
-       }
-       return (taskHandle.getStatus() == WorkStatus.FINISHED) ? nodeFinder.getNode() : null;
-    }
-    
-    protected NodeDetailsBean getNodeDetails(Node data)
+    public NodeDetailsBean getNodeDetails(Node data)
     {
         NodeDetailsBean nodeDetailsBean = new NodeDetailsBean();
         // Collect children, distinguishing between folders and categories
@@ -194,15 +155,4 @@ public class ClassyfyLogic
         return nodeDetailsBean;
     }
     
-    protected NodeFinder getNodeFinder(int nodeId)
-    {
-        return new NodeFinder(nodeId){
-
-            @Override
-            public void onRollback(Throwable rollbackException)
-            {
-                Log.e(TAG, "Fetch node id " + nodeId + ": failed", rollbackException);
-            }
-        };
-    }
 }

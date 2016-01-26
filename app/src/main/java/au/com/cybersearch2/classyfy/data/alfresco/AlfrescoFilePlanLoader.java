@@ -17,17 +17,15 @@ package au.com.cybersearch2.classyfy.data.alfresco;
 
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.io.ByteArrayOutputStream;
 import java.sql.SQLException;
 
-import javax.inject.Inject;
-import javax.inject.Named;
 import javax.persistence.EntityTransaction;
 
 import com.j256.ormlite.support.ConnectionSource;
@@ -39,17 +37,17 @@ import au.com.cybersearch2.classydb.SqlParser.StatementCallback;
 import au.com.cybersearch2.classyfy.ClassyFyApplication;
 import au.com.cybersearch2.classyfy.data.DataLoader;
 import au.com.cybersearch2.classyfy.data.DataStreamParser;
-import au.com.cybersearch2.classynode.Node;
 import au.com.cybersearch2.classyfy.data.SqlFromNodeGenerator;
-import au.com.cybersearch2.classyinject.DI;
+import au.com.cybersearch2.classyfy.helper.FileUtils;
+import au.com.cybersearch2.classyfy.provider.ClassyFyProvider;
 import au.com.cybersearch2.classyjpa.persist.PersistenceAdmin;
 import au.com.cybersearch2.classyjpa.persist.PersistenceContext;
 import au.com.cybersearch2.classyjpa.transaction.EntityTransactionImpl;
 import au.com.cybersearch2.classyjpa.transaction.TransactionCallable;
+import au.com.cybersearch2.classynode.Node;
 import au.com.cybersearch2.classytask.Executable;
 import au.com.cybersearch2.classytask.WorkStatus;
 import au.com.cybersearch2.classytask.WorkTracker;
-import au.com.cybersearch2.classyfy.helper.FileUtils;
 
 /**
  * AlfrescoFilePlanLoader
@@ -58,19 +56,30 @@ import au.com.cybersearch2.classyfy.helper.FileUtils;
  */
 public class AlfrescoFilePlanLoader implements DataLoader
 {
-    protected ByteArrayInputStream instream;
+    protected PersistenceContext persistenceContext;
+    protected InputStream instream;
     protected PersistenceAdmin persistenceAdmin;
-    @Inject @Named("AlfrescoFilePlan") DataStreamParser dataStreamParser;
-    @Inject SqlFromNodeGenerator sqlFromNodeGenerator;
+    protected DataStreamParser dataStreamParser;
+    protected SqlFromNodeGenerator sqlFromNodeGenerator;
     
-    public AlfrescoFilePlanLoader()
+    public AlfrescoFilePlanLoader(
+            PersistenceContext persistenceContext, 
+            DataStreamParser dataStreamParser, 
+            SqlFromNodeGenerator sqlFromNodeGenerator)
     {
-        DI.inject(new AlfrescoFilePlanLoaderModule(), this);
-        persistenceAdmin = new PersistenceContext().getPersistenceAdmin(ClassyFyApplication.PU_NAME);
+        this.persistenceContext = persistenceContext;
+        this.dataStreamParser = dataStreamParser;
+        this.sqlFromNodeGenerator = sqlFromNodeGenerator;
     }
     
     @Override
-    public Executable loadData(final Uri uri) throws IOException 
+    public Executable loadData(Uri uri) throws IOException 
+    {
+        TransactionCallable dataLoadTask = createDataLoadTask(uri);
+        return executeTask(dataLoadTask);
+    }
+    
+    protected TransactionCallable createDataLoadTask(final Uri uri) throws IOException 
     {
         FileUtils.validateUri(uri, ".*\\.xml");
         File dataFile = new File(uri.getPath());
@@ -103,7 +112,7 @@ public class AlfrescoFilePlanLoader implements DataLoader
 		        return true;
 			}
         };
-        return executeTask(processFilesCallable);
+        return processFilesCallable;
     }
     
     
@@ -120,6 +129,7 @@ public class AlfrescoFilePlanLoader implements DataLoader
 				{
 					workTracker.setStatus(WorkStatus.RUNNING);
 			        // Execute task on transaction commit using Callable
+					PersistenceAdmin persistenceAdmin = persistenceContext.getPersistenceAdmin(ClassyFyProvider.PU_NAME);
 			        ConnectionSource connectionSource = persistenceAdmin.getConnectionSource();
 			     	EntityTransaction transaction = new EntityTransactionImpl(connectionSource, processFilesCallable);
 			        transaction.begin();

@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Locale;
 
-import au.com.cybersearch2.classyapp.ApplicationContext;
 import au.com.cybersearch2.classyapp.ResourceEnvironment;
 
 /**
@@ -34,8 +33,8 @@ public class ClassyFyResourceEnvironment implements ResourceEnvironment
     @Override
     public InputStream openResource(String resourceName) throws IOException 
     {
-        ApplicationContext applicationContex = new ApplicationContext();
-        return applicationContex.getContext().getAssets().open(resourceName);
+        ClassyFyApplication classyFyApplication = ClassyFyApplication.getInstance();
+        return classyFyApplication.getAssets().open(resourceName);
     }
 
     @Override

@@ -16,7 +16,6 @@
 package au.com.cybersearch2.classyfy.helper;
 
 import java.util.HashMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import android.content.Intent;

@@ -16,13 +16,13 @@
 package au.com.cybersearch2.classyfy.provider;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
-
-import javax.inject.Inject;
 
 import android.app.SearchManager;
 import android.content.ContentUris;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.SQLException;
@@ -37,7 +37,6 @@ import au.com.cybersearch2.classyfts.FtsOpenHelper;
 import au.com.cybersearch2.classyfts.FtsQueryBuilder;
 import au.com.cybersearch2.classyfts.SearchEngineBase;
 import au.com.cybersearch2.classyfts.WordFilter;
-import au.com.cybersearch2.classyinject.DI;
 
 /**
  * ClassyFySearchEngine
@@ -73,20 +72,19 @@ public class ClassyFySearchEngine extends SearchEngineBase
     /** Search suggestions support. A Cursor must be returned with a set of pre-defined columns */
     protected final Map<String, String> ALL_NODES_TYPE_SEARCH_PROJECTION_MAP;
     /** SQLite database helper dependency accesses application persistence implementation */
-    @Inject
-    SQLiteOpenHelper sqLiteOpenHelper;
+    protected SQLiteOpenHelper sqLiteOpenHelper;
 
     /**
      * Construct ClassyFySearchEngine object
      */
-    public ClassyFySearchEngine()
+    public ClassyFySearchEngine(SQLiteOpenHelper sqLiteOpenHelper, Context context, Locale  locale)
     {
-        super(PROVIDER_AUTHORITY);
+        super(PROVIDER_AUTHORITY, context, locale);
+        this.sqLiteOpenHelper = sqLiteOpenHelper;
         // Add node searches to UriMatcher
         uriMatcher.addURI(PROVIDER_AUTHORITY, "all_nodes", ALL_NODES_TYPES);
         uriMatcher.addURI(PROVIDER_AUTHORITY, "all_nodes/#", ALL_NODES_TYPE_ID);
-        DI.inject(this);
-        // Projection map decouples external names from database column names
+         // Projection map decouples external names from database column names
         ALL_NODES_TYPE_SEARCH_PROJECTION_MAP = createProjectionMap();
     }
 
@@ -134,10 +132,12 @@ public class ClassyFySearchEngine extends SearchEngineBase
         COLUMN_MAP.put(SearchManager.SUGGEST_COLUMN_TEXT_1, "title");
         COLUMN_MAP.put(SearchManager.SUGGEST_COLUMN_TEXT_2, "model");
         COLUMN_MAP.put(SearchManager.SUGGEST_COLUMN_INTENT_DATA_ID, "_id");
-        FtsOpenHelper ftsOpenHelper = new FtsOpenHelper(sqLiteOpenHelper);
+        FtsOpenHelper ftsOpenHelper = new FtsOpenHelper(context, sqLiteOpenHelper);
         FtsEngine ftsEngine = new FtsEngine(ftsOpenHelper, "all_nodes", COLUMN_MAP);
         ftsEngine.setOrderbyText2(true);
         ftsEngine.setText2Filter(text2Filter);
+        ftsEngine.initialize();
+        setFtsQuery(ftsEngine);
         return ftsEngine;
     }
     

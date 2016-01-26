@@ -1,5 +1,5 @@
 /**
-    Copyright (C) 2014  www.cybersearch2.com.au
+    Copyright (C) 2015  www.cybersearch2.com.au
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -16,37 +16,30 @@
 package au.com.cybersearch2.classyfy;
 
 import javax.inject.Inject;
-
 import android.app.SearchManager;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.content.Loader;
 import android.support.v4.view.MenuItemCompat;
-import android.support.v7.app.ActionBarActivity;
+import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.SearchView;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.LinearLayout;
-import android.widget.ListView;
-import android.widget.TextView;
-import android.widget.Toast;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.LinearLayout;
+import android.widget.Toast;
+import au.com.cybersearch2.classyfy.data.Node;
 import au.com.cybersearch2.classyfy.helper.ViewHelper;
-import au.com.cybersearch2.classyfy.interfaces.ClassyFyLauncher;
+import au.com.cybersearch2.classyfy.module.ClassyLogicModule;
+import au.com.cybersearch2.classyfy.provider.ClassyFyProvider;
 import au.com.cybersearch2.classyfy.provider.ClassyFySearchEngine;
-import au.com.cybersearch2.classyinject.DI;
-import au.com.cybersearch2.classytask.BackgroundTask;
-import au.com.cybersearch2.classytask.Executable;
-import au.com.cybersearch2.classytask.WorkStatus;
-import au.com.cybersearch2.classywidget.PropertiesListAdapter;
+import au.com.cybersearch2.classytask.AsyncBackgroundTask;
 
 /**
  * ClassyFy MainActivity
@@ -56,16 +49,17 @@ import au.com.cybersearch2.classywidget.PropertiesListAdapter;
  * @author Andrew Bowley
  * 26 Jun 2015
  */
-@SuppressWarnings("deprecation")
-public class MainActivity extends ActionBarActivity 
+public class MainActivity extends AppCompatActivity 
 {
     public static final String TAG = "MainActivity";
-    /** Monitor to track startup status. Used only for integraion testing */
-    protected Executable startMonitor;
-    /** Monitor status */
-    protected WorkStatus status;
+    /** Error message for interrupted node search. Not expected to happen in normal operation */
+    public static final String SEARCH_NOT_COMPLETED = "Record search did not complete";
+    public static final String START_FAIL_MESSAGE = "ClassyFy failed to start due to unexpected error";
+    /** Start state tracks appplication initialization progress */
+    volatile protected StartState startState = StartState.precreate;
     
-    @Inject /** Persistence queries to obtain record details */
+    /** Finds and formats records */
+    @Inject
     ClassyfyLogic classyfyLogic;
 
     /**
@@ -76,83 +70,62 @@ public class MainActivity extends ActionBarActivity
 	protected void onCreate(Bundle savedInstanceState)
 	{
 		super.onCreate(savedInstanceState);
-		final ClassyFyLauncher classyfyLauncher = (ClassyFyLauncher)getApplication();
-        // Complete initialization in background
-        BackgroundTask starter = new BackgroundTask(this)
+		Log.i(TAG, "In MainActivity onCreate()");
+        final ClassyFyApplication classyFyApplication = 
+                ClassyFyApplication.getInstance();
+        final MainActivity activity = this;
+        setContentView(R.layout.activity_main);
+         // Complete initialization in background
+		AsyncBackgroundTask starter = new AsyncBackgroundTask(getApplication())
         {
             NodeDetailsBean nodeDetails;
             
-            /**
-             * The background task
-             * @see au.com.cybersearch2.classytask.BackgroundTask#loadInBackground()
-             */
             @Override
             public Boolean loadInBackground()
             {
-                // Wait for database initialzation started by Application object
-                status = classyfyLauncher.waitForApplicationSetup();
-                if (status != WorkStatus.FINISHED)
-                    return Boolean.FALSE;
-                // Reset status for database query
-                status = WorkStatus.RUNNING;
-                // Dependency injection delayed until database initialization complete
-                try
-                {
-                    DI.inject(MainActivity.this);
-                }
-                catch (IllegalArgumentException e)
-                {   // DI may throw this exception
-                    notifyStatus(WorkStatus.FAILED);
-                    Log.e(TAG, "Fatal initialization error", e);
-                    return Boolean.FALSE;
-                }
+                Log.i(TAG, "Loading in background...");
+                startState = StartState.build;
+                classyFyApplication.getClassyFyComponent().inject(activity);
+                // Invoke ClassyFyProvider using ContentResolver to force initialization
+                ContentResolver contentResolver = getContentResolver();
+                String type = contentResolver.getType(ClassyFySearchEngine.CONTENT_URI);
+                Log.i(TAG, "Search Engine initialized for content type: " + type);
+                Log.i(TAG, "Getting top level record...");
                 // Get first node, which is root of records tree
-                nodeDetails = classyfyLogic.getNodeDetails(1);
-                if ((nodeDetails == null) || nodeDetails.getCategoryTitles().isEmpty())
-                    return Boolean.FALSE;
-                return  Boolean.TRUE;
+                nodeDetails = getNodeDetailsBean(classyFyApplication, 1);
+                return nodeDetails != null;
             }
 
-            /**
-             * onLoadComplete
-             * @see au.com.cybersearch2.classytask.BackgroundTask#onLoadComplete(android.support.v4.content.Loader, java.lang.Boolean)
-             */
             @Override
             public void onLoadComplete(Loader<Boolean> loader, Boolean success)
             {
-                if (!success)
-                {
-                    notifyStatus(WorkStatus.FAILED);
-                    displayToast("ClassyFy failed to start due to unexpected error");
-                }
-                else
-                {
-                    // Call ClassyFyProvider to wait for SearchEngine start
-                    ContentResolver contentResolver = getContentResolver();
-                    contentResolver.getType(ClassyFySearchEngine.CONTENT_URI);
+                Log.i(TAG, "Loading completed " + success);
+                startState = success ? StartState.run : StartState.fail;
+                if (success)
                     displayContent(nodeDetails);
-                    notifyStatus(WorkStatus.FINISHED);
-                }
-            }
-            protected void notifyStatus(WorkStatus finalStatus) 
-            {
-                status = finalStatus;
-                synchronized(startMonitor)
-                {
-                    startMonitor.notifyAll();
-                }
+                else
+                    displayToast(START_FAIL_MESSAGE);
             }
         };
-        startMonitor = new Executable(){
-
-            @Override
-            public WorkStatus getStatus()
-            {
-                return status;
-            }};
         starter.onStartLoading();
-		
 	}
+
+    private NodeDetailsBean getNodeDetailsBean(ClassyFyApplication classyFyApplication, int nodeId)
+    {   
+        MainActivity activity = this;
+        ClassyLogicModule classyLogicModule = 
+                new ClassyLogicModule(activity, ClassyFyProvider.PU_NAME, nodeId);
+        ClassyLogicComponent classyLogicComponent = 
+                classyFyApplication.getClassyFyComponent().plus(classyLogicModule );
+        Node data = classyLogicComponent.node();
+        if (data == null)
+            return null;
+        // Get first node, which is root of records tree
+        NodeDetailsBean nodeDetails = classyfyLogic.getNodeDetails(data);
+        if ((nodeDetails == null) || nodeDetails.getCategoryTitles().isEmpty())
+            return null;
+        return  nodeDetails;
+    }
 
 	/**
 	 * onCreateOptionsMenu
@@ -180,20 +153,30 @@ public class MainActivity extends ActionBarActivity
 		// as you specify a parent activity in AndroidManifest.xml.
 		int id = item.getItemId();
 		if (id == R.id.action_settings)
-		{
 			return true;
-		}
         switch (item.getItemId()) 
         {
         case R.id.action_search:
-            onSearchRequested();
-            return true;
+            if (isReady())
+            {
+                onSearchRequested();
+                return true;
+            }
+            else
+                return false;
         default:
         }
 		return super.onOptionsItemSelected(item);
 	}
 
-	/**
+	private boolean isReady()
+    {
+	    if (startState == StartState.fail)
+	        displayToast(START_FAIL_MESSAGE);
+        return !startState.isStarting();
+    }
+
+    /**
 	 * onNewIntent
 	 * @see android.support.v4.app.FragmentActivity#onNewIntent(android.content.Intent)
 	 */
@@ -211,7 +194,6 @@ public class MainActivity extends ActionBarActivity
      */
     protected void displayContent(NodeDetailsBean nodeDetails)
     {
-        setContentView(R.layout.activity_main);
         View categoryDetails = ViewHelper.createRecordView(
                 this, 
                 nodeDetails.getHeading(), 
