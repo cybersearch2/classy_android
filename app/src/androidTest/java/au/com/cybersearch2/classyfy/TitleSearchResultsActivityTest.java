@@ -132,7 +132,6 @@ public class TitleSearchResultsActivityTest extends ActivityInstrumentationTestC
         // Injecting the Instrumentation instance is required
         // for your test to run with AndroidJUnitRunner.
         injectInstrumentation(InstrumentationRegistry.getInstrumentation());
-        assertThat(ClassyFyApplication.getInstance().waitForApplicationSetup()).isEqualTo(WorkStatus.FINISHED);
     }
 
     @After
@@ -252,13 +251,16 @@ public class TitleSearchResultsActivityTest extends ActivityInstrumentationTestC
         synchronized (intent) {
             intent.wait(10000);
         }
-        ProgressBar spinner = activity.progressFragment.getSpinner();
-        assertThat(spinner).isNotNull();
-        assertThat(spinner.getVisibility()).isEqualTo(View.GONE);
-        TextView tv1 = (TextView) activity.findViewById(R.id.node_detail_title);
-        assertThat(tv1.getText()).isEqualTo("Record not found");
-        LinearLayout propertiesLayout = (LinearLayout) activity.findViewById(R.id.node_properties);
-        assertThat(propertiesLayout.getChildCount()).isEqualTo(0);
+        runTestOnUiThread(new Runnable() {
+            public void run() {
+		        ProgressBar spinner = activity.progressFragment.getSpinner();
+		        assertThat(spinner).isNotNull();
+		        assertThat(spinner.getVisibility()).isEqualTo(View.GONE);
+		        TextView tv1 = (TextView) activity.findViewById(R.id.node_detail_title);
+		        assertThat(tv1.getText()).isEqualTo("Record not found");
+		        LinearLayout propertiesLayout = (LinearLayout) activity.findViewById(R.id.node_properties);
+		        assertThat(propertiesLayout.getChildCount()).isEqualTo(0);
+            }});
     }
 
     protected void do_action_search_fail(String searchQuery) throws Throwable {
@@ -286,13 +288,17 @@ public class TitleSearchResultsActivityTest extends ActivityInstrumentationTestC
         synchronized (intent) {
             intent.wait(10000);
         }
-        ProgressBar spinner = activity.progressFragment.getSpinner();
-        assertThat(spinner).isNotNull();
-        assertThat(spinner.getVisibility()).isEqualTo(View.GONE);
-        TextView tv1 = (TextView) activity.findViewById(R.id.node_detail_title);
-        assertThat(tv1.getText()).isEqualTo("Record not found");
-        LinearLayout propertiesLayout = (LinearLayout) activity.findViewById(R.id.node_properties);
-        assertThat(propertiesLayout.getChildCount()).isEqualTo(0);
+        runTestOnUiThread(new Runnable() {
+            public void run() {
+		        ProgressBar spinner = activity.progressFragment.getSpinner();
+		        assertThat(spinner).isNotNull();
+		        assertThat(spinner.getVisibility()).isEqualTo(View.GONE);
+		        TextView tv1 = (TextView) activity.findViewById(R.id.node_detail_title);
+		        assertThat(tv1.getText()).isEqualTo("Record not found");
+		        LinearLayout propertiesLayout = (LinearLayout) activity.findViewById(R.id.node_properties);
+		        assertThat(propertiesLayout.getChildCount()).isEqualTo(0);
+            }
+        });
     }
 
     private View createDynamicLayout(String title, Activity activity) {

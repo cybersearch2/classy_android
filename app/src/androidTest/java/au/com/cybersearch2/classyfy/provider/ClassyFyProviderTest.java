@@ -15,25 +15,18 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/> */
 package au.com.cybersearch2.classyfy.provider;
 
+import static org.fest.assertions.api.Assertions.assertThat;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import static org.fest.assertions.api.Assertions.assertThat;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteOpenHelper;
+import android.support.test.runner.AndroidJUnit4;
 import android.test.ProviderTestCase2;
 import android.test.mock.MockContentResolver;
 import android.test.mock.MockContext;
-import android.support.test.runner.AndroidJUnit4;
-
-import javax.inject.Inject;
-
-import au.com.cybersearch2.classyfy.ClassyFyApplication;
-import au.com.cybersearch2.classyinject.DI;
-import dagger.Module;
 
 
 /**
@@ -67,24 +60,12 @@ public class ClassyFyProviderTest extends ProviderTestCase2<ClassyFyProvider>
     public void setUp() throws Exception
     {
         super.setUp();
-        ClassyFyApplication classyfyApplication = ClassyFyApplication.getInstance();
-        classyfyApplication.waitForApplicationSetup();
-        //DI.add(new ClassyFyProviderTestModule());
-        //DI.inject(this);
         mockResolver = getMockContentResolver();
-         /*
-         * Gets a handle to the database underlying the provider. Gets the provider instance
-         * created in super.setUp(), gets the DatabaseOpenHelper for the provider, and gets
-         * a database object from the helper.
-         */
-        //assertThat(sqLiteOpenHelper).isNotNull();
-        //testDb = sqLiteOpenHelper.getWritableDatabase();
     }
 
     @After
     public void tearDown() throws Exception
     {
-        //testDb.close();
         super.tearDown();
     }
 

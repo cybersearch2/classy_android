@@ -104,7 +104,6 @@ public class MainActivityTest extends ActivityInstrumentationTestCase2<MainActiv
         // Injecting the Instrumentation instance is required
         // for your test to run with AndroidJUnitRunner.
         injectInstrumentation(InstrumentationRegistry.getInstrumentation());
-        assertThat(ClassyFyApplication.getInstance().waitForApplicationSetup()).isEqualTo(WorkStatus.FINISHED);
     }
 
     @After
@@ -121,8 +120,6 @@ public class MainActivityTest extends ActivityInstrumentationTestCase2<MainActiv
         // Check that ContentProvider is available for search operations
         ContentResolver contentResolver  = mainActivity.getContentResolver();
         assertThat(contentResolver.getType(ClassyFySearchEngine.CONTENT_URI)).isEqualTo("vnd.android.cursor.dir/vnd.classyfy.node");
-        mainActivity.startMonitor.waitForTask();
-        assertThat(mainActivity.startMonitor.getStatus()).isEqualTo(WorkStatus.FINISHED);
         LinearLayout categoryLayout = (LinearLayout) mainActivity.findViewById(R.id.top_category);
         LinearLayout dynamicLayout = (LinearLayout)categoryLayout.getChildAt(0);
         LinearLayout titleLayout = (LinearLayout)dynamicLayout.getChildAt(0);
