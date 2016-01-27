@@ -25,7 +25,6 @@ import dagger.Subcomponent;
  * @author Andrew Bowley
  * 15 Jan 2016
  */
-@Singleton
 @Subcomponent(modules = AlfrescoFilePlanModule.class)
 public interface AlfrescoFilePlanSubcomponent
 {

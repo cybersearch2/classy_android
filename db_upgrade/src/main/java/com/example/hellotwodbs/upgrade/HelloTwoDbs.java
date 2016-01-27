@@ -2,7 +2,6 @@ package com.example.hellotwodbs.upgrade;
 
 import java.util.Properties;
 
-import com.example.hellotwodbs.R;
 import com.j256.ormlite.support.ConnectionSource;
 
 import android.app.Activity;

@@ -31,7 +31,7 @@ import dagger.Component;
  * 13 Jan 2016
  */
 @Singleton
-@Component(modules = ClassyFyApplicationModule.class)  
+@Component(modules = ClassyFyApplicationModule.class)
 public interface ClassyFyComponent
 {
     PersistenceContext persistenceContext();

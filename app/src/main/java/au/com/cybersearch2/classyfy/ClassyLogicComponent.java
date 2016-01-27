@@ -26,7 +26,6 @@ import dagger.Subcomponent;
  * @author Andrew Bowley
  * 13 Jan 2016
  */
-@Singleton
 @Subcomponent(modules = ClassyLogicModule.class)
 public interface ClassyLogicComponent
 {

@@ -1,1 +1,1 @@
-include ':app', ':classy_tools_lib', ':android_hello_two_dbs', ':android_hello_two_dbs_v2', ':db_upgrade'
+include ':app', ':classy_tools_lib', ':android_hello_two_dbs', ':android_hello_two_dbs_v2', ':db_upgrade', ':shared_library'
