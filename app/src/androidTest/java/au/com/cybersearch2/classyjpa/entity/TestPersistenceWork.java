@@ -70,6 +70,7 @@ public class TestPersistenceWork implements PersistenceWork
     public void onPostExecute(boolean success) 
     {
         transcript.add("onPostExecute " + success);
+        transcript.signal();
     }
 
     @Override

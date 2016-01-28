@@ -18,6 +18,10 @@ package au.com.cybersearch2.classyfy;
 import android.app.Application;
 import android.util.Log;
 import au.com.cybersearch2.classyfy.helper.ConfigureLog4J;
+import au.com.cybersearch2.classyfy.provider.ClassyFyProvider;
+import au.com.cybersearch2.classyjpa.entity.PersistenceWork;
+import au.com.cybersearch2.classyjpa.entity.PersistenceWorkModule;
+import au.com.cybersearch2.classytask.Executable;
 
 /**
  * ClassyFyApplication
@@ -107,5 +111,10 @@ public class ClassyFyApplication extends Application
             this.classyFyComponent = classyFyComponent;
             startMonitor.notifyAll();
         }
+    }
+    public Executable getExecutable(PersistenceWork persistenceWork)
+    {
+        PersistenceWorkModule persistenceWorkModule = new PersistenceWorkModule(ClassyFyProvider.PU_NAME, true, persistenceWork);
+        return classyFyComponent.plus(persistenceWorkModule).executable();
     }
 }

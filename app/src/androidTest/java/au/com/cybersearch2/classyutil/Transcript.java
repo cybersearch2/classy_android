@@ -18,6 +18,7 @@ package au.com.cybersearch2.classyutil;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 import static org.fest.assertions.api.Assertions.assertThat;
 
@@ -29,7 +30,7 @@ import static org.fest.assertions.api.Assertions.assertThat;
 public class Transcript
 {
     protected List<String> textList;
-
+    CountDownLatch signal = new CountDownLatch(1);
     public Transcript()
     {
         textList = new ArrayList<String>();
@@ -75,5 +76,17 @@ public class Transcript
         }
         assertThat(index).isLessThan(textList.size());
     }
+
+    public void signal()
+    {
+        signal.countDown();
+    }
+
+    public void await() throws InterruptedException
+    {
+        signal.await();
+    }
+
+
 
 }

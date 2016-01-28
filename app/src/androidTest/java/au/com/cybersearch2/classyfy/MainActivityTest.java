@@ -69,9 +69,10 @@ public class MainActivityTest extends ActivityInstrumentationTestCase2<MainActiv
  
     private static final String[][] INF_LIST =
     {
-            { "Information & Communications Technology", "Category" },
-            { "Information Management", "Folder" },
-            { "Information Management Policy", "Folder" }
+        { "Information & Communications Technology", "Category" },
+        { "Information Management", "Folder" },
+        { "Information Management Policy", "Folder" }
+
     };
 
     String[] TOP_CATS = new String[]
@@ -88,13 +89,9 @@ public class MainActivityTest extends ActivityInstrumentationTestCase2<MainActiv
 
     protected Context context;
    
-    /**
-     * @param activityClass
-     */
     public MainActivityTest()
     {
         super(MainActivity.class);
-
     }
 
     @Before
@@ -113,10 +110,11 @@ public class MainActivityTest extends ActivityInstrumentationTestCase2<MainActiv
     }
 
     @Test
-    @TargetApi(Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1)
     public void test_search() throws Throwable
     {
         final MainActivity mainActivity = getActivity();
+        // Block until Dagger application component is available
+        ClassyFyApplication.getInstance().getClassyFyComponent();
         // Check that ContentProvider is available for search operations
         ContentResolver contentResolver  = mainActivity.getContentResolver();
         assertThat(contentResolver.getType(ClassyFySearchEngine.CONTENT_URI)).isEqualTo("vnd.android.cursor.dir/vnd.classyfy.node");

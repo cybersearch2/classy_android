@@ -15,6 +15,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/> */
 package au.com.cybersearch2.classyfy.module;
 
+import au.com.cybersearch2.classyfy.ClassyFyApplication;
 import dagger.Module;
 import dagger.Provides;
 import android.content.Context;
@@ -22,9 +23,6 @@ import android.util.Log;
 import android.widget.Toast;
 import au.com.cybersearch2.classyfy.data.Node;
 import au.com.cybersearch2.classyfy.data.NodeFinder;
-import au.com.cybersearch2.classyjpa.entity.JavaPersistenceContext;
-import au.com.cybersearch2.classyjpa.entity.PersistenceContainer;
-import au.com.cybersearch2.classyjpa.persist.PersistenceContext;
 import au.com.cybersearch2.classytask.Executable;
 import au.com.cybersearch2.classytask.WorkStatus;
 
@@ -38,13 +36,13 @@ public class ClassyLogicModule
 {
     public static final String TAG = "ClassyLogicModule";
     
-    private String puName;
     private NodeFinder nodeFinder;
     private Context context;
+    private ClassyFyApplication classyFyApplication;
     
-    public ClassyLogicModule(Context context, String puName, int nodeId)
+    public ClassyLogicModule(Context context, int nodeId)
     {
-        this.puName = puName;
+        classyFyApplication = ClassyFyApplication.getInstance();
         nodeFinder = new NodeFinder(nodeId){
 
             @Override
@@ -56,14 +54,10 @@ public class ClassyLogicModule
         };
     }
 
-    @Provides Node provideNode(PersistenceContext persistenceContext)
+    @Provides Node provideNode()
     {
         Node node = null;
-        PersistenceContainer persistenceContainer = 
-                new PersistenceContainer(persistenceContext, puName, false);
-        JavaPersistenceContext jpaContext = 
-                persistenceContainer.getPersistenceTask(nodeFinder);
-        Executable exe = jpaContext.executeInProcess();
+        Executable exe = classyFyApplication.getExecutable(nodeFinder);
         try
         {
             if (exe.waitForTask() == WorkStatus.FINISHED)

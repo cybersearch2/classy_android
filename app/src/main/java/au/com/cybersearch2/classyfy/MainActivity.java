@@ -39,7 +39,11 @@ import au.com.cybersearch2.classyfy.helper.ViewHelper;
 import au.com.cybersearch2.classyfy.module.ClassyLogicModule;
 import au.com.cybersearch2.classyfy.provider.ClassyFyProvider;
 import au.com.cybersearch2.classyfy.provider.ClassyFySearchEngine;
+import au.com.cybersearch2.classyjpa.entity.PersistenceWork;
+import au.com.cybersearch2.classyjpa.entity.PersistenceWorkModule;
+import au.com.cybersearch2.classyjpa.persist.PersistenceWorker;
 import au.com.cybersearch2.classytask.AsyncBackgroundTask;
+import au.com.cybersearch2.classytask.Executable;
 
 /**
  * ClassyFy MainActivity
@@ -57,7 +61,8 @@ public class MainActivity extends AppCompatActivity
     public static final String START_FAIL_MESSAGE = "ClassyFy failed to start due to unexpected error";
     /** Start state tracks appplication initialization progress */
     volatile protected StartState startState = StartState.precreate;
-    
+
+    private ClassyFyComponent classyFyComponent;
     /** Finds and formats records */
     @Inject
     ClassyfyLogic classyfyLogic;
@@ -85,7 +90,8 @@ public class MainActivity extends AppCompatActivity
             {
                 Log.i(TAG, "Loading in background...");
                 startState = StartState.build;
-                classyFyApplication.getClassyFyComponent().inject(activity);
+                classyFyComponent = classyFyApplication.getClassyFyComponent();
+                classyFyComponent.inject(activity);
                 // Invoke ClassyFyProvider using ContentResolver to force initialization
                 ContentResolver contentResolver = getContentResolver();
                 String type = contentResolver.getType(ClassyFySearchEngine.CONTENT_URI);
@@ -113,10 +119,10 @@ public class MainActivity extends AppCompatActivity
     private NodeDetailsBean getNodeDetailsBean(ClassyFyApplication classyFyApplication, int nodeId)
     {   
         MainActivity activity = this;
-        ClassyLogicModule classyLogicModule = 
-                new ClassyLogicModule(activity, ClassyFyProvider.PU_NAME, nodeId);
+        ClassyLogicModule classyLogicModule =
+                new ClassyLogicModule(activity, nodeId);
         ClassyLogicComponent classyLogicComponent = 
-                classyFyApplication.getClassyFyComponent().plus(classyLogicModule );
+                classyFyComponent.plus(classyLogicModule);
         Node data = classyLogicComponent.node();
         if (data == null)
             return null;

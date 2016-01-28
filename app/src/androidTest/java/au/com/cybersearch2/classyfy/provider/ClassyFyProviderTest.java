@@ -28,6 +28,9 @@ import android.test.ProviderTestCase2;
 import android.test.mock.MockContentResolver;
 import android.test.mock.MockContext;
 
+import au.com.cybersearch2.classyfy.ClassyFyApplication;
+import au.com.cybersearch2.classyfy.ClassyFyComponent;
+
 
 /**
  * @author andrew
@@ -36,19 +39,7 @@ import android.test.mock.MockContext;
 @RunWith(AndroidJUnit4.class)
 public class ClassyFyProviderTest extends ProviderTestCase2<ClassyFyProvider>
 {
-    // Test database created from injected SQLiteOpenHelper - NOT USED
-    //@Module(injects = ClassyFyProviderTest.class, complete=false )
-    //public static class ClassyFyProviderTestModule
-    //{
-    //}
-    //private static final String TAG = ClassyFyProviderTest.class.getSimpleName();
-
     private MockContentResolver mockResolver;
-    // Contains an SQLite database, used as test data
-    //private SQLiteDatabase testDb;
-    /** SQLite database helper dependency accesses application persistence implementation */
-    //@Inject
-   // SQLiteOpenHelper sqLiteOpenHelper;
 
 	public ClassyFyProviderTest()
     {
@@ -61,6 +52,10 @@ public class ClassyFyProviderTest extends ProviderTestCase2<ClassyFyProvider>
     {
         super.setUp();
         mockResolver = getMockContentResolver();
+        // Block until Dagger application component is available
+        ClassyFyComponent classyFyComponent =  ClassyFyApplication.getInstance().getClassyFyComponent();
+        // Set classyFySearchEngine in test provider, which is isolated from application instance
+        getProvider().classyFySearchEngine = classyFyComponent.classyFySearchEngine();
     }
 
     @After

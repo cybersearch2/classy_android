@@ -21,11 +21,9 @@ import java.util.List;
 
 import javax.inject.Inject;
 
-import android.annotation.TargetApi;
 import android.app.SearchManager;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.Loader;
@@ -49,7 +47,6 @@ import au.com.cybersearch2.classywidget.ListItem;
  * @author Andrew Bowley
  * 21/04/2014
  */
-@TargetApi(Build.VERSION_CODES.HONEYCOMB)
 public class TitleSearchResultsActivity extends FragmentActivity
 {
     public static final String TAG = "TitleSearchResults";
@@ -59,7 +56,7 @@ public class TitleSearchResultsActivity extends FragmentActivity
     protected String REFINE_SEARCH_MESSAGE;
     /** Progress spinner fragment */
     protected ProgressFragment progressFragment;
-     
+    private ClassyFyComponent classyFyComponent;
     @Inject /* Intent tracker */
     TicketManager ticketManager;
     @Inject
@@ -73,7 +70,8 @@ public class TitleSearchResultsActivity extends FragmentActivity
     {
         super.onCreate(savedInstanceState);
         ClassyFyApplication classyFyApplication = ClassyFyApplication.getInstance();
-        classyFyApplication.getClassyFyComponent().inject(this);
+        classyFyComponent = classyFyApplication.getClassyFyComponent();
+        classyFyComponent.inject(this);
         setContentView(R.layout.results_list);
         progressFragment = getProgressFragment();
         REFINE_SEARCH_MESSAGE = this.getString(R.string.refine_search);
@@ -261,9 +259,8 @@ public class TitleSearchResultsActivity extends FragmentActivity
     protected ClassyLogicComponent getClassyLogicComponent(int nodeId)
     {
         ClassyLogicModule classyLogicModule = 
-                new ClassyLogicModule(this, ClassyFyProvider.PU_NAME, nodeId);
-        ClassyFyComponent component = ClassyFyApplication.getInstance().getClassyFyComponent();
-        return component.plus(classyLogicModule );
+                new ClassyLogicModule(this, nodeId);
+        return classyFyComponent.plus(classyLogicModule );
     }
     
     private NodeDetailsBean getNodeDetailsBean(Node node)

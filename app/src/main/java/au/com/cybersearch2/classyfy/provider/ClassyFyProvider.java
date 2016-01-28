@@ -26,6 +26,8 @@ import android.net.Uri;
 import android.os.CancellationSignal;
 import android.support.v4.content.Loader;
 import android.util.Log;
+
+import au.com.cybersearch2.classyfts.FtsEngine;
 import au.com.cybersearch2.classyfy.ClassyFyApplication;
 import au.com.cybersearch2.classyfy.ClassyFyComponent;
 import au.com.cybersearch2.classyfy.DaggerClassyFyComponent;
@@ -102,6 +104,8 @@ public class ClassyFyProvider extends ContentProvider
                     return Boolean.FALSE;
                 }
                 classyFySearchEngine = classyFyComponent.classyFySearchEngine();
+                FtsEngine ftsEngine = classyFyComponent.ftsEngine();
+                classyFySearchEngine.setFtsQuery(ftsEngine);
                 application.setComponent(classyFyComponent);
                 return Boolean.TRUE;
             }
@@ -122,7 +126,10 @@ public class ClassyFyProvider extends ContentProvider
 	@Override
     public void shutdown() 
 	{
-	    classyFyComponent.persistenceContext().getDatabaseSupport().close();
+        PersistenceContext persistenceContext =
+                classyFyComponent == null ? null : classyFyComponent.persistenceContext();
+        if (persistenceContext != null)
+            persistenceContext.getDatabaseSupport().close();
 	}
 
    /**

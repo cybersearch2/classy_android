@@ -17,27 +17,19 @@ package au.com.cybersearch2.classyjpa.entity;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import static org.fest.assertions.api.Assertions.assertThat;
-import static org.fest.assertions.api.Assertions.failBecauseExceptionWasNotThrown;
 
 import javax.persistence.EntityExistsException;
-
 import android.support.test.InstrumentationRegistry;
 import android.test.InstrumentationTestCase;
 import android.support.test.runner.AndroidJUnit4;
 import au.com.cybersearch2.classyfy.ClassyFyApplication;
-import au.com.cybersearch2.classyfy.data.RecordCategory;
-import au.com.cybersearch2.classyfy.data.RecordFolder;
+import au.com.cybersearch2.classyfy.ClassyFyComponent;
 import au.com.cybersearch2.classyfy.provider.ClassyFyProvider;
 import au.com.cybersearch2.classyjpa.EntityManagerLite;
-import au.com.cybersearch2.classyjpa.persist.PersistenceAdmin;
-import au.com.cybersearch2.classyjpa.persist.PersistenceContext;
-import au.com.cybersearch2.classyjpa.transaction.EntityTransactionImpl;
-import au.com.cybersearch2.classynode.EntityByNodeIdGenerator;
 import au.com.cybersearch2.classytask.Executable;
 import au.com.cybersearch2.classytask.WorkStatus;
 import au.com.cybersearch2.classyutil.Transcript;
@@ -50,17 +42,15 @@ import au.com.cybersearch2.classyutil.Transcript;
 @RunWith(AndroidJUnit4.class)
 public class PersistenceLoaderTest extends InstrumentationTestCase
 {
-    protected PersistenceLoader testLoaderTask;
     protected PersistenceLoader testUserTransLoaderTask;
+    protected ClassyFyComponent component;
 
     @Before
     public void setUp() throws Exception
     {
         super.setUp();
         injectInstrumentation(InstrumentationRegistry.getInstrumentation());
-        //testLoaderTask = new PersistenceLoader(getInstrumentation().getContext());
-	    //testUserTransLoaderTask = new PersistenceLoader(getInstrumentation().getContext());
-	    testUserTransLoaderTask.setUserTransactionMode(true);
+        component = ClassyFyApplication.getInstance().getClassyFyComponent();
     }
 
     @After
@@ -70,25 +60,31 @@ public class PersistenceLoaderTest extends InstrumentationTestCase
     }
 
 
+    private Executable doWork(PersistenceWork persistenceWork)
+    {
+        PersistenceLoader testLoaderTask =
+                new PersistenceLoader(getInstrumentation().getContext(), component.persistenceContext());
+        return testLoaderTask.execute(ClassyFyProvider.PU_NAME, persistenceWork);
+    }
+
     // Cannot test NPE
     // Test failed to run to completion. Reason: 'Instrumentation run failed due to 'java.lang.NullPointerException''. Check device logcat for details
-    @Ignore
     @Test
     public void test_background_called() throws Throwable
     {
     	Transcript transcript = new Transcript();
-        final PersistenceWork persistenceWork = null; //new TestPersistenceWork(transcript);
+        final PersistenceWork persistenceWork = new TestPersistenceWork(transcript);
         final Executable[] exeHolder = new Executable[1];
         runTestOnUiThread(new Runnable() {
             public void run()
             {
-                 exeHolder[0] = testLoaderTask.execute(ClassyFyProvider.PU_NAME, persistenceWork);
+                 exeHolder[0] = doWork(persistenceWork);
             }});
         WorkStatus status = exeHolder[0].waitForTask();
         transcript.assertEventsSoFar("background task", "onPostExecute true");
         assertThat(status).isEqualTo(WorkStatus.FINISHED);
     }
-/*
+
     @Test
     public void test_rollback_only() throws Throwable
     {
@@ -108,7 +104,7 @@ public class PersistenceLoaderTest extends InstrumentationTestCase
         runTestOnUiThread(new Runnable() {
             public void run()
             {
-                exeHolder[0] = testLoaderTask.execute(ClassyFyApplication.PU_NAME, persistenceWork);
+                exeHolder[0] = doWork(persistenceWork);
             }});
         WorkStatus status = exeHolder[0].waitForTask();
         transcript.assertEventsSoFar("background task", "onPostExecute false");
@@ -133,11 +129,11 @@ public class PersistenceLoaderTest extends InstrumentationTestCase
         runTestOnUiThread(new Runnable() {
             public void run()
             {
-                exeHolder[0] = testLoaderTask.execute(ClassyFyApplication.PU_NAME, persistenceWork);
+                exeHolder[0] = doWork(persistenceWork);
             }});
         WorkStatus status = exeHolder[0].waitForTask();
         transcript.assertEventsSoFar("background task", "onRollback " + persistException.toString());
         assertThat(status).isEqualTo(WorkStatus.FAILED);
     }
-*/
+
 }
