@@ -118,6 +118,16 @@ public class MainActivityTest extends ActivityInstrumentationTestCase2<MainActiv
         // Check that ContentProvider is available for search operations
         ContentResolver contentResolver  = mainActivity.getContentResolver();
         assertThat(contentResolver.getType(ClassyFySearchEngine.CONTENT_URI)).isEqualTo("vnd.android.cursor.dir/vnd.classyfy.node");
+        // Wait up to 10 seconds for start completion
+        for (int i = 0; i < 10; i++)
+        {
+            if (mainActivity.startState == StartState.run)
+                break;
+            if (mainActivity.startState == StartState.fail)
+                fail("MainActivity failed on start");
+            Thread.sleep(1000);
+        }
+        assertThat(mainActivity.startState == StartState.run);
         LinearLayout categoryLayout = (LinearLayout) mainActivity.findViewById(R.id.top_category);
         LinearLayout dynamicLayout = (LinearLayout)categoryLayout.getChildAt(0);
         LinearLayout titleLayout = (LinearLayout)dynamicLayout.getChildAt(0);
