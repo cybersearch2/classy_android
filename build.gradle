@@ -7,8 +7,6 @@ buildscript {
         maven {
             url "$androidHome/extras/android/m2repository/"
         }
-        mavenLocal()
-        mavenCentral()
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:1.5.0'

@@ -42,7 +42,7 @@ android {
 dependencies {
 
     compile fileTree(dir: 'libs', include: ['*.jar'])
-    compile ('au.com.cybersearch2:classy_tools_lib:1.2-SNAPSHOT') {
+    compile ('au.com.cybersearch2:classy_tools_lib:1.2') {
         exclude group: 'commons-collections', module: 'commons-collections'
         exclude group: 'commons-beanutils', module: 'commons-beanutils'
     }
