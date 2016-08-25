@@ -75,4 +75,5 @@ dependencies {
     testCompile('org.robolectric:robolectric:3.0') {
         exclude group: 'commons-logging', module: 'commons-logging'
         exclude group: 'org.apache.httpcomponents', module: 'httpclient'
+        exclude group: 'org.robolectric', module: 'robolectric-annotations'
      }}
