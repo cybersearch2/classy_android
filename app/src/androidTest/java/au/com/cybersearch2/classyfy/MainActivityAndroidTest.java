@@ -50,12 +50,12 @@ import au.com.cybersearch2.classywidget.PropertiesListAdapter;
 import au.com.cybersearch2.classywidget.ListItem;
 
 /**
- * MainActivityTest
+ * MainActivityAndroidTest
  * @author Andrew Bowley
  * 23/07/2014
  */
 @RunWith(AndroidJUnit4.class)
-public class MainActivityTest extends ActivityInstrumentationTestCase2<MainActivity>
+public class MainActivityAndroidTest extends ActivityInstrumentationTestCase2<MainActivity>
 {
     private static final String[][] RECORD_DETAILS_ARRAY =
     {
@@ -89,7 +89,7 @@ public class MainActivityTest extends ActivityInstrumentationTestCase2<MainActiv
 
     protected Context context;
    
-    public MainActivityTest()
+    public MainActivityAndroidTest()
     {
         super(MainActivity.class);
     }

@@ -11,7 +11,7 @@ import au.com.cybersearch2.classyjpa.entity.PersistenceLoaderTest;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-        MainActivityTest.class,
+        MainActivityAndroidTest.class,
         TitleSearchResultsActivityTest.class,
         ClassyFyProviderTest.class,
         PersistenceLoaderTest.class
