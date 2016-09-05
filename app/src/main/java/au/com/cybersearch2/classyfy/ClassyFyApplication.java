@@ -18,10 +18,10 @@ package au.com.cybersearch2.classyfy;
 import android.app.Application;
 import android.util.Log;
 import au.com.cybersearch2.classyfy.helper.ConfigureLog4J;
-import au.com.cybersearch2.classyfy.provider.ClassyFyProvider;
+import au.com.cybersearch2.classyfy.service.ClassyFyService;
 import au.com.cybersearch2.classyjpa.entity.PersistenceWork;
-import au.com.cybersearch2.classyjpa.entity.PersistenceWorkModule;
 import au.com.cybersearch2.classytask.Executable;
+import au.com.cybersearch2.classytask.WorkStatus;
 
 /**
  * ClassyFyApplication
@@ -38,7 +38,10 @@ public class ClassyFyApplication extends Application
     static ClassyFyApplication singleton;
     /** Dagger2 Application Component - ClassyFy will not run unless this variable is set */
     protected ClassyFyComponent classyFyComponent;
+    protected ClassyFyService classyFyService;
     protected Object startMonitor;
+    /** Record last executable to monitor activity */
+    private volatile Executable executable;
 
     /**
      * Construct ClassyFyApplication object
@@ -67,6 +70,11 @@ public class ClassyFyApplication extends Application
             Log.i(TAG, "Start ClassyFy application");
     }
 
+    public void closeApplication()
+    {
+        android.os.Process.killProcess(android.os.Process.myPid());
+    }
+    
     /**
      * Returns Dagger2 application component but blocks if
      * it is not available due to initialization in progress.
@@ -104,17 +112,29 @@ public class ClassyFyApplication extends Application
         return singleton;
     }
 
-    public void setComponent(ClassyFyComponent classyFyComponent)
+    public void setComponent(ClassyFyComponent classyFyComponent, ClassyFyService classyFyService)
     {
+        this.classyFyService = classyFyService;
         synchronized(startMonitor)
         {
             this.classyFyComponent = classyFyComponent;
             startMonitor.notifyAll();
         }
     }
-    public Executable getExecutable(PersistenceWork persistenceWork)
+ 
+    public WorkStatus getWorkStatus() throws InterruptedException
     {
-        PersistenceWorkModule persistenceWorkModule = new PersistenceWorkModule(ClassyFyProvider.PU_NAME, true, persistenceWork);
-        return classyFyComponent.plus(persistenceWorkModule).executable();
+        if (executable == null)
+            return WorkStatus.PENDING;
+        WorkStatus workStatus = executable.waitForTask();
+        if (workStatus != WorkStatus.RUNNING)
+            executable = null;
+        return workStatus;
+    }
+
+    public Executable getExecutable(PersistenceWork persistenceWork) throws InterruptedException
+    {
+        executable = classyFyService.put(persistenceWork);
+        return executable;
     }
 }

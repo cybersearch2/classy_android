@@ -19,24 +19,22 @@ import static org.fest.assertions.api.Assertions.assertThat;
 import static org.fest.assertions.api.Assertions.failBecauseExceptionWasNotThrown;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isA;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.robolectric.RobolectricGradleTestRunner;
+import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
-import au.com.cybersearch2.classyfy.BuildConfig;
-import dagger.Module;
-import dagger.Provides;
-
-import javax.inject.Singleton;
-
+import android.app.SearchManager;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.UriMatcher;
@@ -44,27 +42,21 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
-import android.app.SearchManager;
 import android.net.Uri;
 import android.provider.BaseColumns;
-import au.com.cybersearch2.classyapp.ApplicationLocale;
-import au.com.cybersearch2.classyapp.ContextModule;
-import au.com.cybersearch2.classyapp.ResourceEnvironment;
 import au.com.cybersearch2.classyfts.FtsOpenHelper;
 import au.com.cybersearch2.classyfts.FtsQuery;
 import au.com.cybersearch2.classyfts.FtsQueryBuilder;
-import au.com.cybersearch2.classyfy.ClassyFyResourceEnvironment;
+import au.com.cybersearch2.classyfy.BuildConfig;
 import au.com.cybersearch2.classyfy.TestClassyFyApplication;
-import au.com.cybersearch2.classyinject.ApplicationModule;
-import au.com.cybersearch2.classyinject.DI;
 
 /**
  * ClassyFySearchEngineTest
  * @author Andrew Bowley
  * 11/07/2014
  */
-@RunWith(RobolectricGradleTestRunner.class)
-@Config(constants = BuildConfig.class, emulateSdk = 21)
+@RunWith(RobolectricTestRunner.class)
+@Config(constants = BuildConfig.class, sdk = 23)
 public class ClassyFySearchEngineTest
 {
     class TestFtsQueryBuilder extends FtsQueryBuilder
@@ -124,37 +116,14 @@ public class ClassyFySearchEngineTest
         }
     }
  
-    @Module(injects = { 
-            TestClassyFySearchEngine.class, 
-            ClassyFySearchEngine.class,
-            ApplicationLocale.class
-            }, complete = false)
-    static class TestClassyFySearchEngineModule implements ApplicationModule
-    {
-        SQLiteOpenHelper sqliteOpenHelper = mock(SQLiteOpenHelper.class);
-        
-        @Provides @Singleton
-        SQLiteOpenHelper provideSqLiteOpenHelper()
-        {   // SQLiteOpenHelper only has to handle getWritableDatabase() call
-            SQLiteDatabase sQLiteDatabase = mock(SQLiteDatabase.class);
-            when(sqliteOpenHelper.getWritableDatabase()).thenReturn(sQLiteDatabase);
-            return sqliteOpenHelper;
-        }
-        
-        @Provides @Singleton ResourceEnvironment provideResourceEnvironment()
-        {
-            return new ClassyFyResourceEnvironment();
-        }
-    }
-    
     class TestClassyFySearchEngine extends ClassyFySearchEngine
     {
         public List<Uri> notifyChangeList;
         public TestFtsQueryBuilder qb;
              
-        public TestClassyFySearchEngine()
+        public TestClassyFySearchEngine(SQLiteOpenHelper sqLiteOpenHelper, Context context, Locale  locale)
         {
-            super();
+            super(sqliteOpenHelper, context, locale);
             notifyChangeList = new ArrayList<Uri>();
         }
         
@@ -186,29 +155,31 @@ public class ClassyFySearchEngineTest
     protected boolean ftsAvailable;
     protected FtsQuery testFtsQuery;
     protected SQLiteQueryBuilder sqLiteQueryBuilder;
+    protected SQLiteOpenHelper sqliteOpenHelper;
+    protected Locale locale;
 
 
     @Before
     public void setup() throws Exception 
     {
-        if (context == null)
-        {
-            TestClassyFyApplication classyfyLauncher = TestClassyFyApplication.getTestInstance();
-            context = classyfyLauncher;
-            Object[] initModules = new Object[] { new ContextModule(context) }; 
-            new DI(new TestClassyFySearchEngineModule(), initModules);
-        }
+        context = TestClassyFyApplication.getTestInstance();
+        sqliteOpenHelper = mock(SQLiteOpenHelper.class);
+        // SQLiteOpenHelper only has to handle getWritableDatabase() call
+        SQLiteDatabase sQLiteDatabase = mock(SQLiteDatabase.class);
+        when(sqliteOpenHelper.getWritableDatabase()).thenReturn(sQLiteDatabase);
         ftsOpenHelper = mock(FtsOpenHelper.class);
         cursor = mock(Cursor.class);
         searchSuggestPath = "lex";
         ftsAvailable = true;
         testFtsQuery = mock(FtsQuery.class);
+        locale = new Locale("en", "AU");
     }
 
     @Test
     public void test_constructor() throws Exception
     {   
-        ClassyFySearchEngine classyFySearchEngine = new ClassyFySearchEngine();
+        ClassyFySearchEngine classyFySearchEngine = 
+                new ClassyFySearchEngine(sqliteOpenHelper, context, locale);
         assertThat(classyFySearchEngine.sqLiteOpenHelper).isNotNull();
         UriMatcher uriMatcher = classyFySearchEngine.getUriMatcher();
         Uri searchQueryUri = Uri.parse(SCHEME + PROVIDER_AUTHORITY + PATH_ALL_NODES);
@@ -221,7 +192,7 @@ public class ClassyFySearchEngineTest
     @Test
     public void testGetType() throws Exception
     {
-        ClassyFySearchEngine classyFySearchEngine = new ClassyFySearchEngine();
+        ClassyFySearchEngine classyFySearchEngine = new ClassyFySearchEngine(sqliteOpenHelper, context, locale);
         Uri allNodesUri = Uri.parse(SCHEME + PROVIDER_AUTHORITY + PATH_ALL_NODES);
         assertThat(classyFySearchEngine.getType(allNodesUri)).isEqualTo(ContentResolver.CURSOR_DIR_BASE_TYPE + "/" + ALL_NODES_SUB_TYPE);
         Uri nodeItemUri = Uri.parse(SCHEME + PROVIDER_AUTHORITY + PATH_ALL_NODES + "/1");
@@ -257,7 +228,7 @@ public class ClassyFySearchEngineTest
     @Test
     public void testQuery() throws Exception
     {
-        TestClassyFySearchEngine classyFySearchEngine = new TestClassyFySearchEngine();
+        TestClassyFySearchEngine classyFySearchEngine = new TestClassyFySearchEngine(sqliteOpenHelper, context, locale);
         // Defines a projection of column names to return for a query
         final String[] TEST_PROJECTION = {
             ClassyFySearchEngine.KEY_TITLE,
@@ -303,7 +274,7 @@ public class ClassyFySearchEngineTest
     @Test
     public void testSuggestionLexicalQuery() throws Exception
     {
-        TestClassyFySearchEngine classyFySearchEngine = new TestClassyFySearchEngine();
+        TestClassyFySearchEngine classyFySearchEngine = new TestClassyFySearchEngine(sqliteOpenHelper, context, locale);
         FtsQuery ftsQuery = mock(FtsQuery.class);
         String selection = SearchManager.SUGGEST_COLUMN_TEXT_1 + " MATCH ?";
         String[] columns = new String[] 
@@ -337,7 +308,7 @@ public class ClassyFySearchEngineTest
     {
         // Defines a query sort order
         final String SORT_ORDER = "name ASC";
-        TestClassyFySearchEngine classyFySearchEngine = new TestClassyFySearchEngine();
+        TestClassyFySearchEngine classyFySearchEngine = new TestClassyFySearchEngine(sqliteOpenHelper, context, locale);
         Uri suggestUri = Uri.parse(SCHEME + PROVIDER_AUTHORITY + "/" + SearchManager.SUGGEST_URI_PATH_QUERY  + "/information?limit=50");
  
         // A query that uses selection criteria should return only those rows that match the
@@ -369,7 +340,7 @@ public class ClassyFySearchEngineTest
         final String SORT_ORDER = "name ASC";
         final String SELECTION = "match WORD ?";
         final String[] SELECTION_ARGS = { "information" };
-        TestClassyFySearchEngine classyFySearchEngine = new TestClassyFySearchEngine();
+        TestClassyFySearchEngine classyFySearchEngine = new TestClassyFySearchEngine(sqliteOpenHelper, context, locale);
         // Uri is expected to have searchSuggestPath = "lex"
         Uri suggestUri = Uri.parse(SCHEME + PROVIDER_AUTHORITY + PATH_SEGMENT_LEX + SearchManager.SUGGEST_URI_PATH_QUERY  + "?limit=50");
         // A query that uses selection criteria should return only those rows that match the
@@ -392,4 +363,5 @@ public class ClassyFySearchEngineTest
         assertThat(classyFySearchEngine.qb.getProjectionMap().size()).isEqualTo(4);
         verify(cursor).setNotificationUri(isA(ContentResolver.class), eq(suggestUri));
     }
+ 
 }

@@ -38,6 +38,7 @@ import au.com.cybersearch2.classyfy.helper.TicketManager;
 import au.com.cybersearch2.classyfy.helper.ViewHelper;
 import au.com.cybersearch2.classyfy.module.ClassyLogicModule;
 import au.com.cybersearch2.classyfy.provider.ClassyFyProvider;
+import au.com.cybersearch2.classyfy.provider.ClassyFySearchEngine;
 import au.com.cybersearch2.classytask.AsyncBackgroundTask;
 import au.com.cybersearch2.classywidget.ListItem;
 
@@ -57,6 +58,7 @@ public class TitleSearchResultsActivity extends FragmentActivity
     /** Progress spinner fragment */
     protected ProgressFragment progressFragment;
     private ClassyFyComponent classyFyComponent;
+
     @Inject /* Intent tracker */
     TicketManager ticketManager;
     @Inject
@@ -215,7 +217,7 @@ public class TitleSearchResultsActivity extends FragmentActivity
     }
     /**
      * Display Node details in a dialog
-     * @param uri Search suggestion containing node id in path segment 1
+     * @param nodeId Node id in path segment 1
      * @param ticket Intent tracker id
      */
     protected void displayNodeDetails(final int nodeId, final int ticket)
@@ -300,6 +302,7 @@ public class TitleSearchResultsActivity extends FragmentActivity
      */
     protected View createDynamicLayout(String title, List<ListItem> items, boolean isSingleLine)
     {
+        final TitleSearchResultsActivity myActivity = this;
         return ViewHelper.createRecordView(this, title, items, isSingleLine, 
                 new OnItemClickListener(){
 
@@ -307,7 +310,11 @@ public class TitleSearchResultsActivity extends FragmentActivity
             public void onItemClick(AdapterView<?> parent, View view,
                     int position, long id)
             {
-                displayNodeDetails((int)id, ticketManager.voidTicket());
+                Intent viewIntent = new Intent(myActivity.getApplicationContext(), myActivity.getClass());
+                viewIntent.setAction(Intent.ACTION_VIEW);
+                Uri actionUri = Uri.withAppendedPath(ClassyFySearchEngine.CONTENT_URI, Long.toString(id));
+                viewIntent.setData(actionUri);
+                displayNodeDetails((int)id, ticketManager.addIntent(viewIntent));
             }
         });
     }

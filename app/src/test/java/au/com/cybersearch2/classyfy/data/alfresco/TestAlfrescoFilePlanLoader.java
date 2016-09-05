@@ -15,6 +15,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/> */
 package au.com.cybersearch2.classyfy.data.alfresco;
 
+import au.com.cybersearch2.classyfy.data.DataStreamParser;
+import au.com.cybersearch2.classyfy.data.SqlFromNodeGenerator;
+import au.com.cybersearch2.classyjpa.persist.PersistenceContext;
 import au.com.cybersearch2.classyjpa.transaction.TransactionCallable;
 import au.com.cybersearch2.classytask.Executable;
 import au.com.cybersearch2.classytask.WorkStatus;
@@ -28,7 +31,15 @@ import au.com.cybersearch2.classytask.WorkTracker;
 public class TestAlfrescoFilePlanLoader extends AlfrescoFilePlanLoader 
 {
 
-	public TransactionCallable processFilesCallable;
+	public TestAlfrescoFilePlanLoader(
+	        PersistenceContext persistenceContext, 
+	        DataStreamParser dataStreamParser,
+            SqlFromNodeGenerator sqlFromNodeGenerator)
+    {
+        super(persistenceContext, dataStreamParser, sqlFromNodeGenerator);
+    }
+
+    public TransactionCallable processFilesCallable;
 	
     protected Executable executeTask(final TransactionCallable processFilesCallable) 
     {

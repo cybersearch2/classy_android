@@ -16,6 +16,7 @@
 package au.com.cybersearch2.classyfy;
 
 import javax.inject.Inject;
+
 import android.app.SearchManager;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -26,6 +27,7 @@ import android.support.v4.content.Loader;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.SearchView;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -37,13 +39,8 @@ import android.widget.Toast;
 import au.com.cybersearch2.classyfy.data.Node;
 import au.com.cybersearch2.classyfy.helper.ViewHelper;
 import au.com.cybersearch2.classyfy.module.ClassyLogicModule;
-import au.com.cybersearch2.classyfy.provider.ClassyFyProvider;
 import au.com.cybersearch2.classyfy.provider.ClassyFySearchEngine;
-import au.com.cybersearch2.classyjpa.entity.PersistenceWork;
-import au.com.cybersearch2.classyjpa.entity.PersistenceWorkModule;
-import au.com.cybersearch2.classyjpa.persist.PersistenceWorker;
 import au.com.cybersearch2.classytask.AsyncBackgroundTask;
-import au.com.cybersearch2.classytask.Executable;
 
 /**
  * ClassyFy MainActivity
@@ -80,7 +77,11 @@ public class MainActivity extends AppCompatActivity
                 ClassyFyApplication.getInstance();
         final MainActivity activity = this;
         setContentView(R.layout.activity_main);
-         // Complete initialization in background
+        // Comment out if using ActionBar in place of Toolbar
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        /////////////////////////////
+        // Complete initialization in background
 		AsyncBackgroundTask starter = new AsyncBackgroundTask(getApplication())
         {
             NodeDetailsBean nodeDetails;
@@ -109,8 +110,9 @@ public class MainActivity extends AppCompatActivity
                 startState = success ? StartState.run : StartState.fail;
                 if (success)
                     displayContent(nodeDetails);
-                else
-                    displayToast(START_FAIL_MESSAGE);
+                // TODO - Cannot display toast inside thread which has not called Looper.prepare()
+                //else
+                //    displayToast(START_FAIL_MESSAGE);
             }
         };
         starter.onStartLoading();

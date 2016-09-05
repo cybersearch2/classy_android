@@ -17,6 +17,7 @@ package au.com.cybersearch2.classyfy;
 
 import javax.inject.Singleton;
 
+import au.com.cybersearch2.classyapp.ResourceEnvironment;
 import au.com.cybersearch2.classyfts.FtsEngine;
 import au.com.cybersearch2.classyfy.data.alfresco.AlfrescoFilePlanSubcomponent;
 import au.com.cybersearch2.classyfy.module.AlfrescoFilePlanModule;
@@ -36,6 +37,7 @@ import dagger.Component;
 @Component(modules = ClassyFyApplicationModule.class)
 public interface ClassyFyComponent
 {
+    ResourceEnvironment resourceEnvironment();
     PersistenceContext persistenceContext();
     ClassyFySearchEngine classyFySearchEngine();
     FtsEngine ftsEngine();

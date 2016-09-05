@@ -37,11 +37,11 @@ import au.com.cybersearch2.classyfy.ClassyFyComponent;
  *
  */
 @RunWith(AndroidJUnit4.class)
-public class ClassyFyProviderTest extends ProviderTestCase2<ClassyFyProvider>
+public class AndroidClassyFyProviderTest extends ProviderTestCase2<ClassyFyProvider>
 {
     private MockContentResolver mockResolver;
 
-	public ClassyFyProviderTest()
+	public AndroidClassyFyProviderTest()
     {
 	    super(ClassyFyProvider.class, ClassyFySearchEngine.PROVIDER_AUTHORITY);
         super.setContext(new MockContext());

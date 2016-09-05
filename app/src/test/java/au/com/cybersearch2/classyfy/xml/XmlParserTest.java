@@ -7,7 +7,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import org.robolectric.RobolectricGradleTestRunner;
+import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
 import au.com.cybersearch2.classyfy.BuildConfig;
@@ -15,11 +15,9 @@ import au.com.cybersearch2.classynode.Node;
 import au.com.cybersearch2.classyfy.data.alfresco.AlfrescoFilePlanXmlParser;
 import static org.fest.assertions.api.Assertions.assertThat;
 
-// Run as API 19 as workaround to Robolectric not instrumenting classes in org.kxml3 -
-// https://github.com/robolectric/robolectric/issues/1876
-// Requires 40634K  android-all-4.4_r1-robolectric-1.jar
-@RunWith(RobolectricGradleTestRunner.class)
-@Config(constants = BuildConfig.class, emulateSdk = 19)
+
+@RunWith(RobolectricTestRunner.class)
+@Config(constants = BuildConfig.class, sdk = 23)
 public class XmlParserTest
 {
     interface NodeFunction
@@ -53,7 +51,7 @@ public class XmlParserTest
             "Information & Communications Technology",
             "Workforce Management"        
     };
-
+    
     @Test
     public void doXmlParserTest() throws Exception
     {

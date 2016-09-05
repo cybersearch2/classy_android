@@ -17,45 +17,29 @@ package au.com.cybersearch2.classyfy;
 
 import static org.fest.assertions.api.Assertions.assertThat;
 
-import java.util.concurrent.Callable;
-
-import javax.inject.Singleton;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.Assert;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
-import org.robolectric.RobolectricGradleTestRunner;
+import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
-import org.robolectric.Shadows;
 import org.robolectric.annotation.Config;
-import org.robolectric.annotation.Implementation;
-import org.robolectric.annotation.Implements;
-import org.robolectric.annotation.RealObject;
-import org.robolectric.shadows.ShadowActivity;
-import org.robolectric.shadows.ShadowApplication;
-import org.robolectric.shadows.ShadowLooper;
-import org.robolectric.util.SimpleFuture;
+import org.robolectric.shadows.ShadowContentResolver;
+import org.robolectric.shadows.ShadowSQLiteConnection;
 
-import dagger.Module;
-import dagger.Provides;
 import android.content.ContentResolver;
-import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.SystemClock;
-import android.support.v4.content.AsyncTaskLoader;
-import android.view.Menu;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 import au.com.cybersearch2.classyfy.data.NodeEntity;
+import au.com.cybersearch2.classyfy.provider.ClassyFyProvider;
 import au.com.cybersearch2.classyfy.provider.ClassyFySearchEngine;
-import au.com.cybersearch2.classyinject.ApplicationModule;
-import au.com.cybersearch2.classyinject.DI;
 import au.com.cybersearch2.classytask.WorkStatus;
 import au.com.cybersearch2.classywidget.ListItem;
 
@@ -64,87 +48,10 @@ import au.com.cybersearch2.classywidget.ListItem;
  * @author Andrew Bowley
  * 26/05/2014
  */
-@RunWith(RobolectricGradleTestRunner.class)
-@Config(constants = BuildConfig.class, emulateSdk = 21)
+@RunWith(RobolectricTestRunner.class)
+@Config(constants = BuildConfig.class, sdk = 23)
 public class IntegrateMainActivityTest
 {
-    @Implements(value = SystemClock.class, callThroughByDefault = true)
-    public static class MyShadowSystemClock {
-        public static long elapsedRealtime() {
-            return 0;
-        }
-    }
-
-    @Implements(AsyncTaskLoader.class)
-    public static class MyShadowAsyncTaskLoader<D> 
-    {
-          @RealObject private AsyncTaskLoader<D> realLoader;
-          private SimpleFuture<D> future;
-
-          public void __constructor__(Context context) {
-            BackgroundWorker worker = new BackgroundWorker();
-            future = new SimpleFuture<D>(worker) {
-              @Override protected void done() {
-                try {
-                  final D result = get();
-                  ShadowLooper.getUiThreadScheduler().post(new Runnable() {
-                    @Override public void run() {
-                      realLoader.deliverResult(result);
-                    }
-                  });
-                } catch (InterruptedException e) {
-                  // Ignore
-                }
-              }
-            };
-          }
-
-          @Implementation
-          public void onForceLoad() {
-            ShadowApplication.getInstance().getBackgroundScheduler().post(new Runnable() {
-              @Override
-              public void run() {
-                future.run();
-              }
-            });
-          }
-
-          private final class BackgroundWorker implements Callable<D> {
-            @Override public D call() throws Exception {
-              return realLoader.loadInBackground();
-            }
-          }
-    }
-
-    public static class TestMainActivity extends MainActivity
-    {
-        /**
-         * Bypass search action view creation
-         * which Robolectric does not support because of Shadow MenuItemCompat.getActionView() bug
-         * @return 
-         */
-        @Override
-        protected void createSearchView(Menu menu)
-        {
-        }
-        
-        public void doCreateSearchView(Menu menu)
-        {
-            super.createSearchView(menu);
-        }
-    }
-
-    @Module(injects=TestMainActivity.class)
-    public static class TestModule implements ApplicationModule
-    {   // Note there will be two  ClassyfyLogic "singletons" if both 
-        // MainActivy and TitleSearchResultsActivity are included in the same test.
-        @Provides @Singleton ClassyfyLogic proviceClassyfyLogic()
-        {
-            return new ClassyfyLogic();
-        }
-    }
-    
-
     class NodeField
     {
         public int id;
@@ -216,15 +123,30 @@ public class IntegrateMainActivityTest
     };
 
     static final String TITLE = "Corporate Management";
+    private MainActivity mainActivity;
     
     @Before
     public void setUp() throws Exception 
     {
+        // Reset ShadowSQLiteConnection to avoid "Illegal connection pointer" exception 
+        ShadowSQLiteConnection.reset();
         TestClassyFyApplication classyfyLauncher = TestClassyFyApplication.getTestInstance();
-        classyfyLauncher.startup();
-        // Add TestModule to graph to cover TestMainActivity
-        DI.add(new TestModule());
-        classyfyLauncher.waitForApplicationSetup();
+        classyfyLauncher.startApplication();
+        ClassyFyProvider classyFyProvider = new ClassyFyProvider();
+        classyFyProvider.onCreate();
+        ShadowContentResolver.registerProvider(
+                ClassyFySearchEngine.PROVIDER_AUTHORITY, 
+                classyFyProvider);
+        mainActivity = Robolectric.setupActivity(MainActivity.class);
+        while (true) {
+            Robolectric.getForegroundThreadScheduler().advanceToLastPostedRunnable();
+            Robolectric.getBackgroundThreadScheduler().advanceToLastPostedRunnable();
+            WorkStatus startStatus = classyfyLauncher.getWorkStatus();
+            if (startStatus == WorkStatus.FINISHED)
+                break;
+            if (startStatus == WorkStatus.FAILED)
+                Assert.fail("Launch of initial node lookup failed");
+        }
     }
     
     @After
@@ -237,39 +159,11 @@ public class IntegrateMainActivityTest
         return new Intent(RuntimeEnvironment.application, MainActivity.class);
     }
 
-    @Config(shadows = { MyShadowSystemClock.class, MyShadowAsyncTaskLoader.class }, constants = BuildConfig.class, emulateSdk = 21)
-    @Test
-    public void test_mainActivity_onCreate() throws InterruptedException
-    {
-        // Create MainActivity
-        MainActivity mainActivity = Robolectric.buildActivity(TestMainActivity.class)
-        .create()
-        .start()
-        .visible()
-        .get();
-        mainActivity.startMonitor.waitForTask();
-        assertThat(mainActivity.startMonitor.getStatus()).isEqualTo(WorkStatus.FINISHED);
-        ShadowActivity activity = Shadows.shadowOf(mainActivity);
-        LinearLayout categoryLayout = (LinearLayout) activity.findViewById(R.id.top_category);
-        LinearLayout dynamicLayout = (LinearLayout)categoryLayout.getChildAt(0);
-        LinearLayout titleLayout = (LinearLayout)dynamicLayout.getChildAt(0);
-        TextView titleView = (TextView) titleLayout.getChildAt(0);
-        assertThat(titleView.getText()).isEqualTo("Category: Cybersearch2 Records");
-        ListView itemList = (ListView)dynamicLayout.getChildAt(1);
-        ListAdapter adapter = itemList.getAdapter();
-        assertThat(adapter.getCount()).isEqualTo(TOP_CATS.length);
-        for (int i = 0; i < TOP_CATS.length; i++)
-        {
-            ListItem listItem = (ListItem)adapter.getItem(i);
-            assertThat(listItem.getValue()).isEqualTo(TOP_CATS[i]);
-            assertThat(listItem.getId()).isGreaterThan(1);
-        }
-    }
-    
-    @Config(shadows = { MyShadowSystemClock.class, MyShadowAsyncTaskLoader.class }, constants = BuildConfig.class, emulateSdk = 21)
     @Test
     public void test_parseIntent_action_view() throws InterruptedException
     {
+        assertThat(mainActivity).isNotNull();
+        //assertThat(mainActivity.startState).isEqualTo(StartState.run);
         // Check that ContentProvider is available for search operations
         ContentResolver contentResolver  = TestClassyFyApplication.getTestInstance().getContentResolver();
         assertThat(contentResolver.getType(ClassyFySearchEngine.CONTENT_URI)).isEqualTo("vnd.android.cursor.dir/vnd.classyfy.node");
@@ -278,16 +172,24 @@ public class IntegrateMainActivityTest
         intent.setAction(Intent.ACTION_VIEW);
         Uri actionUri = Uri.withAppendedPath(ClassyFySearchEngine.CONTENT_URI, "3");
         intent.setData(actionUri);
-        TitleSearchResultsActivity titleSearchResultsActivity = Robolectric.buildActivity(TitleSearchResultsActivity.class)
-        .create()
-        .start()
-        .visible()
-        .get();
-        ShadowLooper.getUiThreadScheduler().pause();
-        ShadowApplication.getInstance().getBackgroundScheduler().pause();
-        titleSearchResultsActivity.parseIntent(intent);
-        ShadowApplication.getInstance().getBackgroundScheduler().runOneTask();
-        Robolectric.flushForegroundScheduler();
+        TitleSearchResultsActivity titleSearchResultsActivity = Robolectric.buildActivity(TitleSearchResultsActivity.class, intent).setup().get();
+        while (true)
+        {
+            Robolectric.getForegroundThreadScheduler().advanceToLastPostedRunnable();
+            Robolectric.getBackgroundThreadScheduler().advanceToLastPostedRunnable();
+            WorkStatus startStatus = TestClassyFyApplication.getTestInstance().getWorkStatus();
+            if (startStatus == WorkStatus.FINISHED)
+                break;
+            if (startStatus == WorkStatus.FAILED)
+                Assert.fail("Launch of TitleSearchResults failed");
+        }
+        // Wait up to 10 seconds for TicketManager to release intent
+        synchronized(intent)
+        {
+            intent.wait(10000);
+        }
+        Robolectric.getForegroundThreadScheduler().advanceToLastPostedRunnable();
+        Robolectric.getBackgroundThreadScheduler().advanceToLastPostedRunnable();
         assertThat(titleSearchResultsActivity.progressFragment.getSpinner().getVisibility()).isEqualTo(View.GONE);
         TextView tv1 = (TextView)titleSearchResultsActivity.findViewById(R.id.node_detail_title);
         assertThat(tv1.getText()).isEqualTo("Category: " + NODE_FIELDS[2].title);

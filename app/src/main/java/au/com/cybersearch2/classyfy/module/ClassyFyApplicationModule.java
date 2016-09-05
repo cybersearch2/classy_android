@@ -60,7 +60,7 @@ public class ClassyFyApplicationModule
 
     @Provides @Singleton OpenEventHandler provideOpenEventHandler(Context context, PersistenceFactory persistenceFactory)
     {
-        // NOTE: This class extends Android SQLiteHelper 
+        // NOTE: This class extends Android SQLiteHelper. OpenHelperManager not required because it is a singleton. 
         return new OpenEventHandler(new AndroidSqliteParams(context, ClassyFyProvider.PU_NAME, persistenceFactory));
     }
     

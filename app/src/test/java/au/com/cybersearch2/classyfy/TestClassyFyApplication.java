@@ -19,11 +19,9 @@ import java.lang.reflect.Method;
 
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.TestLifecycleApplication;
+import org.robolectric.shadows.ShadowEnvironment;
 
-import android.util.Log;
-import au.com.cybersearch2.classyapp.ContextModule;
-import au.com.cybersearch2.classyinject.DI;
-import au.com.cybersearch2.classytask.WorkStatus;
+import android.os.Environment;
 
 /**
  * TestClassyFyApplication
@@ -32,15 +30,29 @@ import au.com.cybersearch2.classytask.WorkStatus;
  */
 public class TestClassyFyApplication extends ClassyFyApplication implements TestLifecycleApplication
 {
-    private static ClassyFyApplicationModule classyFyApplicationModule;
     public static final String TAG = "TestClassyFyApplication";
     public static final String PU_NAME = "classyfy";
     private static TestClassyFyApplication singleton;
  
+    private ClassyFyComponent testClassyFyComponent;
+    
     public TestClassyFyApplication()
     {
         singleton = this;
         RuntimeEnvironment.application = singleton;
+    }
+
+    /**
+     * onCreate
+     * @see android.app.Application#onCreate()
+     */
+    @Override public void onCreate() 
+    {
+        // Don't call super.onCreate() as this initializes dependency injection
+        // The following method is super.super.onCreate()
+        onAndroidCreate();
+        ShadowEnvironment.setExternalStorageState(Environment.MEDIA_MOUNTED);
+        System.out.println(ShadowEnvironment.getExternalStorageDirectory());
     }
 
     @Override
@@ -58,6 +70,12 @@ public class TestClassyFyApplication extends ClassyFyApplication implements Test
     {
     }
 
+    
+    public void setTestClassyFyComponent(ClassyFyComponent testClassyFyComponent)
+    {
+        this.testClassyFyComponent = testClassyFyComponent;
+    }
+
     public static TestClassyFyApplication getTestInstance()
     {
         if (singleton == null)
@@ -65,45 +83,17 @@ public class TestClassyFyApplication extends ClassyFyApplication implements Test
         return singleton;
     }
     
-    public static ClassyFyApplicationModule getTestApplicationModule()
-    {
-        return classyFyApplicationModule;
-    }
-
-    public void init(Object... extraModules)
-    {
-        classyFyApplicationModule = new ClassyFyApplicationModule();
-        ContextModule contextModule = new ContextModule(this);
-        Object[] initModules = new Object[extraModules.length + 1];
-        initModules[0] = contextModule;
-        if (extraModules.length > 0)
-            for (int i = 0; i < extraModules.length; i++)
-                initModules[i + 1] = extraModules[i];
-        new DI(classyFyApplicationModule, initModules);
-    }
-    
     public void startup()
     {
-        super.startApplicationSetup();
     }
 
-    /**
-     * Wait for application setup
-     * @see au.com.cybersearch2.classyfy.interfaces.ClassyFyLauncher#waitForApplicationSetup()
-     */
-    @Override
-    public WorkStatus waitForApplicationSetup()
+    public ClassyFyComponent getClassyFyComponent()
     {
-        return startup.waitForApplicationSetup();
-    }
-
-    /**
-     * Override to allow startup to be optional
-     * @see au.com.cybersearch2.classyfy.ClassyFyApplication#startApplicationSetup()
-     */
-    @Override
-    protected void startApplicationSetup()
-    {
+        if (testClassyFyComponent == null)
+            return super.getClassyFyComponent();
+        // Set super classyFyComponent variable for direct access
+        classyFyComponent = testClassyFyComponent;
+        return testClassyFyComponent;
     }
 
 }

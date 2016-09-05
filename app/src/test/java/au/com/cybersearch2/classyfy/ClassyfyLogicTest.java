@@ -16,7 +16,6 @@
 package au.com.cybersearch2.classyfy;
 
 import static org.fest.assertions.api.Assertions.assertThat;
-import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -28,12 +27,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import javax.inject.Singleton;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.robolectric.RobolectricGradleTestRunner;
+import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
 import android.app.SearchManager;
@@ -41,64 +38,23 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
-import au.com.cybersearch2.classyapp.ContextModule;
 import au.com.cybersearch2.classybean.BeanMap;
 import au.com.cybersearch2.classyfy.data.Node;
 import au.com.cybersearch2.classyfy.data.NodeEntity;
-import au.com.cybersearch2.classyfy.data.NodeFinder;
 import au.com.cybersearch2.classyfy.data.RecordCategory;
+import au.com.cybersearch2.classyfy.provider.ClassyFyProvider;
 import au.com.cybersearch2.classyfy.provider.ClassyFySearchEngine;
-import au.com.cybersearch2.classyinject.ApplicationModule;
-import au.com.cybersearch2.classyinject.DI;
-import au.com.cybersearch2.classyjpa.entity.PersistenceContainer;
-import au.com.cybersearch2.classyjpa.persist.Persistence;
-import au.com.cybersearch2.classyjpa.persist.PersistenceAdmin;
-import au.com.cybersearch2.classyjpa.persist.PersistenceContext;
-import au.com.cybersearch2.classyjpa.persist.PersistenceFactory;
-import au.com.cybersearch2.classyjpa.persist.TestEntityManagerFactory;
-import au.com.cybersearch2.classytask.Executable;
-import au.com.cybersearch2.classytask.ThreadHelper;
-import au.com.cybersearch2.classytask.WorkStatus;
-import au.com.cybersearch2.classytask.WorkerRunnable;
 import au.com.cybersearch2.classywidget.ListItem;
-
-import com.j256.ormlite.support.ConnectionSource;
-
-import dagger.Module;
-import dagger.Provides;
 
 /**
  * ClassyfyLogicTest
  * @author Andrew Bowley
  * 6 Jul 2015
  */
-@RunWith(RobolectricGradleTestRunner.class)
-@Config(constants = BuildConfig.class, emulateSdk = 21)
+@RunWith(RobolectricTestRunner.class)
+@Config(constants = BuildConfig.class, sdk = 23)
 public class ClassyfyLogicTest
 {
-    @Module(injects = { PersistenceContext.class, WorkerRunnable.class })
-    static class TestModule implements ApplicationModule
-    {
-        @Provides @Singleton PersistenceFactory providePersistenceModule() 
-        {
-            PersistenceFactory persistenceFactory = mock(PersistenceFactory.class);
-            Persistence persistence = mock(Persistence.class);
-            when(persistenceFactory.getPersistenceUnit(isA(String.class))).thenReturn(persistence);
-            PersistenceAdmin persistenceAdmin = mock(PersistenceAdmin.class);
-            ConnectionSource connectionSource = mock(ConnectionSource.class);
-            when(persistenceAdmin.isSingleConnection()).thenReturn(false);
-            when(persistenceAdmin.getConnectionSource()).thenReturn(connectionSource);
-            when(persistence.getPersistenceAdmin()).thenReturn(persistenceAdmin);
-            when(persistenceAdmin.getEntityManagerFactory()).thenReturn(new TestEntityManagerFactory());
-            return persistenceFactory;
-        }
-        
-        @Provides @Singleton ThreadHelper provideThreadHelper()
-        {
-            return new ClassyFyThreadHelper();
-        }
-    }
-
     class NodeField
     {
         public int id;
@@ -161,7 +117,6 @@ public class ClassyfyLogicTest
     private static final String RECORD_NAME = "Cybersearch2-Records";
     private static final String RECORD_VALUE = "Cybersearch2 Records";
     private static final long NODE_ID = 34L;
-    private static final int RECORD_ID = 77;
     
     protected Context mockContext;
     protected ContentResolver contentResolver;
@@ -172,19 +127,12 @@ public class ClassyfyLogicTest
         contentResolver = mock(ContentResolver.class);
         mockContext = mock(Context.class);
         when(mockContext.getContentResolver()).thenReturn(contentResolver);
-        ContextModule contextModule = new ContextModule(mockContext);
-        new DI(new TestModule(), contextModule);
-        TestEntityManagerFactory.setEntityManagerInstance();
-        /*(entityManager = (EntityManagerImpl) */TestEntityManagerFactory.getEntityManager();
     }
-
 
     @Test
     public void test_doSearchQuery()
     {
-        ClassyfyLogic classyfyLogic = new ClassyfyLogic();
-        assertThat(classyfyLogic.applicationContext).isNotNull();
-        assertThat(classyfyLogic.persistenceContainer).isNotNull();
+        ClassyfyLogic classyfyLogic = new ClassyfyLogic(mockContext);
         Cursor cursor = mock(Cursor.class);
         when(cursor.getColumnIndexOrThrow(SearchManager.SUGGEST_COLUMN_TEXT_1)).thenReturn(1);
         when(cursor.getColumnIndexOrThrow(SearchManager.SUGGEST_COLUMN_TEXT_2)).thenReturn(2);
@@ -196,7 +144,7 @@ public class ClassyfyLogicTest
         when(cursor.getLong(0)).thenReturn(NODE_ID);
         Uri uri = Uri.parse(ClassyFySearchEngine.LEX_CONTENT_URI + "?" + 
                             SearchManager.SUGGEST_PARAMETER_LIMIT + "=" +
-                            String.valueOf(ClassyFyApplication.SEARCH_RESULTS_LIMIT));
+                            String.valueOf(ClassyFyProvider.SEARCH_RESULTS_LIMIT));
         when(contentResolver.query(uri, null, "word MATCH ?", new String[] { SEARCH_TEXT }, null)).thenReturn(cursor);
         List<ListItem> result = classyfyLogic.doSearchQuery(SEARCH_TEXT);
         assertThat(result.size()).isEqualTo(1);
@@ -210,9 +158,7 @@ public class ClassyfyLogicTest
     @Test
     public void test_doSearchQueryNotFound()
     {
-        ClassyfyLogic classyfyLogic = new ClassyfyLogic();
-        assertThat(classyfyLogic.applicationContext).isNotNull();
-        assertThat(classyfyLogic.persistenceContainer).isNotNull();
+        ClassyfyLogic classyfyLogic = new ClassyfyLogic(mockContext);
         Cursor cursor = mock(Cursor.class);
         when(cursor.getColumnIndexOrThrow(SearchManager.SUGGEST_COLUMN_TEXT_1)).thenReturn(1);
         when(cursor.getColumnIndexOrThrow(SearchManager.SUGGEST_COLUMN_TEXT_2)).thenReturn(2);
@@ -220,7 +166,7 @@ public class ClassyfyLogicTest
         when(cursor.getCount()).thenReturn(0);
         Uri uri = Uri.parse(ClassyFySearchEngine.LEX_CONTENT_URI + "?" + 
                             SearchManager.SUGGEST_PARAMETER_LIMIT + "=" +
-                            String.valueOf(ClassyFyApplication.SEARCH_RESULTS_LIMIT));
+                            String.valueOf(ClassyFyProvider.SEARCH_RESULTS_LIMIT));
         when(contentResolver.query(uri, null, "word MATCH ?", new String[] { SEARCH_TEXT }, null)).thenReturn(cursor);
         List<ListItem> result = classyfyLogic.doSearchQuery(SEARCH_TEXT);
         assertThat(result.size()).isEqualTo(0);
@@ -228,46 +174,10 @@ public class ClassyfyLogicTest
     }
 
     @Test
-    public void test_getNodeById() throws InterruptedException
-    {
-        Node node = mock(Node.class);
-        final NodeFinder nodeFinder = mock(NodeFinder.class);
-        when(nodeFinder.getNode()).thenReturn(node);
-        ClassyfyLogic classyfyLogic = new ClassyfyLogic()
-        {
-            @Override
-            protected NodeFinder getNodeFinder(int nodeId)
-            {
-                assertThat(nodeId).isEqualTo(RECORD_ID);
-                return nodeFinder;
-            }
-        };
-        
-        classyfyLogic.persistenceContainer = mock(PersistenceContainer.class);
-        Executable exe = mock(Executable.class);
-        when(exe.getStatus()).thenReturn(WorkStatus.FINISHED);
-        when(classyfyLogic.persistenceContainer.executeTask(nodeFinder)).thenReturn(exe);
-        assertThat(classyfyLogic.getNodeById(RECORD_ID)).isEqualTo(node);
-        verify(exe).waitForTask();
-    }
-    
-    @Test
-    public void test_getNodeByIdInterrupted() throws InterruptedException
-    {
-        InterruptedException exeception = new InterruptedException("!");
-        ClassyfyLogic classyfyLogic = new ClassyfyLogic();
-        classyfyLogic.persistenceContainer = mock(PersistenceContainer.class);
-        Executable exe = mock(Executable.class);
-        when(exe.waitForTask()).thenThrow(exeception);
-        when(classyfyLogic.persistenceContainer.executeTask(isA(NodeFinder.class))).thenReturn(exe);
-        assertThat(classyfyLogic.getNodeById(RECORD_ID)).isNull();
-    }
-    
-    @Test
     public void test_getNodeDetails() throws Exception
     {
         Node data = getTestNode();
-        ClassyfyLogic classyfyLogic = new ClassyfyLogic();
+        ClassyfyLogic classyfyLogic = new ClassyfyLogic(mockContext);
         NodeDetailsBean result = classyfyLogic.getNodeDetails(data);
         assertThat(result.getHeading()).isEqualTo("Category: " + NODE_FIELDS[2].title);
         assertThat(result.getHierarchy().size()).isEqualTo(2);
@@ -299,7 +209,6 @@ public class ClassyfyLogicTest
         nodeEntity6.setTitle("Category " + NODE_FIELDS[4].title);
         nodeEntity6.setModel(1);
         new Node(nodeEntity6, data);
-        classyfyLogic = new ClassyfyLogic();
         result = classyfyLogic.getNodeDetails(data);
         assertThat(result.getCategoryTitles().size()).isEqualTo(2);
         assertThat(result.getCategoryTitles().get(0).getId()).isEqualTo(6);

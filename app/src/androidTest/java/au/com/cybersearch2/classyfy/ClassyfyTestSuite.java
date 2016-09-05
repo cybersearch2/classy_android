@@ -3,7 +3,7 @@ package au.com.cybersearch2.classyfy;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
-import au.com.cybersearch2.classyfy.provider.ClassyFyProviderTest;
+import au.com.cybersearch2.classyfy.provider.AndroidClassyFyProviderTest;
 import au.com.cybersearch2.classyjpa.entity.PersistenceLoaderTest;
 
 /**
@@ -12,8 +12,8 @@ import au.com.cybersearch2.classyjpa.entity.PersistenceLoaderTest;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
         MainActivityAndroidTest.class,
-        TitleSearchResultsActivityTest.class,
-        ClassyFyProviderTest.class,
+        TitleSearchResultsActivityAndroidTest.class,
+        AndroidClassyFyProviderTest.class,
         PersistenceLoaderTest.class
         })
 public class ClassyfyTestSuite

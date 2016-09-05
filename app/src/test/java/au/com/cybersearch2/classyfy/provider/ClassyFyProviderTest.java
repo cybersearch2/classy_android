@@ -15,46 +15,55 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/> */
 package au.com.cybersearch2.classyfy.provider;
 
+import static org.fest.assertions.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.robolectric.RobolectricGradleTestRunner;
+import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
-import static org.fest.assertions.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
 import android.content.ContentValues;
 import android.net.Uri;
 import android.os.CancellationSignal;
-import au.com.cybersearch2.classyapp.PrimaryContentProvider;
+
 import au.com.cybersearch2.classyfy.BuildConfig;
-import au.com.cybersearch2.classyfy.TestClassyFyApplication;
+import au.com.cybersearch2.classyfy.ClassyFyApplication;
 
 /**
  * ClassyFyProviderTest
  * @author Andrew Bowley
  * 24 Jun 2015
  */
-@RunWith(RobolectricGradleTestRunner.class)
-@Config(constants = BuildConfig.class, emulateSdk = 21)
+@RunWith(RobolectricTestRunner.class)
+@Config(constants = BuildConfig.class, sdk = 23)
 public class ClassyFyProviderTest
 {
     public static final String PROVIDER_AUTHORITY = "au.com.cybersearch2.classyfy.ClassyFyProvider";
-    // The scheme part for this provider's URI
-    private static final String SCHEME = "content://";
-    private static final String PATH_ALL_NODES = "/all_nodes";
+
+    @Before
+    public void setUp() throws Exception 
+    {
+    }
 
     @Test
     public void test_onCreate()
     {
         ClassyFyProvider classyFyProvider = new ClassyFyProvider();
         assertThat(classyFyProvider.onCreate()).isTrue();
+        assertThat(ClassyFyApplication.getInstance().getClassyFyComponent()).isNotNull();
+        classyFyProvider.shutdown();
     }
     
     @Test
     public void testPrimaryContentProvider()
     {
         ClassyFyProvider classyFyProvider = new ClassyFyProvider();
-        PrimaryContentProvider classyFySearchEngine = mock(PrimaryContentProvider.class);
+        ClassyFySearchEngine classyFySearchEngine = mock(ClassyFySearchEngine.class);
+        when(classyFySearchEngine.getType(Uri.EMPTY)).thenReturn("vnd.android.cursor.dir/vnd.classyfy.node");
         classyFyProvider.classyFySearchEngine = classyFySearchEngine;
         classyFyProvider.getType(Uri.EMPTY);
         verify(classyFySearchEngine).getType(Uri.EMPTY);
@@ -76,18 +85,4 @@ public class ClassyFyProviderTest
         verify(classyFySearchEngine).delete(Uri.EMPTY, selection, selectionArgs);
     }
     
-    @Test
-    public void test_getClassyFySearchEngine()
-    {
-        Uri uri = Uri.parse(SCHEME + PROVIDER_AUTHORITY + PATH_ALL_NODES);
-        // Because ClassyFySearchEngine is fetched from the ClassFyApplication object,
-        // there is no way to orchestrate getClassyFySearchEngine() testing with mocks.
-        // Context.getContentResolver() is used to access Android's ClassyFyContentProvider instance
-        TestClassyFyApplication classyfyLauncher = TestClassyFyApplication.getTestInstance();
-        classyfyLauncher.startup();
-        classyfyLauncher.waitForApplicationSetup();
-        // Get type has a simple code implementation and therefore suitable to test the
-        // ContentProvider has populated it's ClassyFySearchEngine field.
-        assertThat(classyfyLauncher.getContentResolver().getType(uri)).isEqualTo("vnd.android.cursor.dir/vnd.classyfy.node");
-    }
 }

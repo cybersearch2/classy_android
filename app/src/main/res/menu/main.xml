@@ -6,7 +6,7 @@
     <item android:id="@+id/action_search"
         android:icon="@android:drawable/ic_menu_search"
         android:title="@string/menu_search"
-        classyfy:showAsAction="ifRoom|collapseActionView"
+        classyfy:showAsAction="always"
         classyfy:actionViewClass="android.support.v7.widget.SearchView"/>
     <item
         android:id="@+id/action_settings"

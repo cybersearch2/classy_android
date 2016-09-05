@@ -15,31 +15,16 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/> */
 package au.com.cybersearch2.classyfy.provider;
 
-import javax.persistence.PersistenceException;
-
-import com.j256.ormlite.dao.DaoManager;
-
 import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.CancellationSignal;
-import android.support.v4.content.Loader;
 import android.util.Log;
-
-import au.com.cybersearch2.classyfts.FtsEngine;
 import au.com.cybersearch2.classyfy.ClassyFyApplication;
 import au.com.cybersearch2.classyfy.ClassyFyComponent;
-import au.com.cybersearch2.classyfy.DaggerClassyFyComponent;
-import au.com.cybersearch2.classyfy.data.RecordCategory;
-import au.com.cybersearch2.classyfy.data.RecordFolder;
-import au.com.cybersearch2.classyfy.data.RecordModel;
-import au.com.cybersearch2.classyfy.module.ClassyFyApplicationModule;
-import au.com.cybersearch2.classyjpa.persist.PersistenceAdmin;
+import au.com.cybersearch2.classyfy.service.ClassyFyService;
 import au.com.cybersearch2.classyjpa.persist.PersistenceContext;
-import au.com.cybersearch2.classynode.EntityByNodeIdGenerator;
-import au.com.cybersearch2.classynode.Node;
-import au.com.cybersearch2.classytask.AsyncBackgroundTask;
 
 
 /**
@@ -56,10 +41,6 @@ public class ClassyFyProvider extends ContentProvider
 {
     /** Persistence unit name refers to peristence.xml in assets */
     public static final String PU_NAME = "classyfy";
-    /** Name of query to get Category record by id */
-    public static final String CATEGORY_BY_NODE_ID = Node.NODE_BY_PRIMARY_KEY_QUERY + RecordModel.recordCategory.ordinal();
-    /** Name of query to get Folder record by id */
-    public static final String FOLDER_BY_NODE_ID = Node.NODE_BY_PRIMARY_KEY_QUERY + RecordModel.recordFolder.ordinal();
     /** Limit maximum number of search results */
     public static final int SEARCH_RESULTS_LIMIT = 50; // Same as Android
 
@@ -67,9 +48,10 @@ public class ClassyFyProvider extends ContentProvider
     
 	/** The actual ContentProvider implementation - 
 	 * lazily loaded because it is available only when Application startup is completed */
-    ClassyFySearchEngine classyFySearchEngine;
+    protected ClassyFySearchEngine classyFySearchEngine;
     /** Dagger2 Application Component - ClassyFy will not run unless this variable is set */
     protected ClassyFyComponent classyFyComponent;
+    protected ClassyFyService classyFyService;
 
 	/**
 	 * onCreate() called before Application onCreate(), so can do nothing as DI not initialized.
@@ -79,44 +61,26 @@ public class ClassyFyProvider extends ContentProvider
 	public boolean onCreate()
 	{
         final ClassyFyApplication application = ClassyFyApplication.getInstance();
-        AsyncBackgroundTask starter = new AsyncBackgroundTask(application)
+        classyFyService = new ClassyFyService(new ClassyFyService.ClassyfyServiceCallback()
         {
+            
             @Override
-            public Boolean loadInBackground()
+            public void onServiceStart(ClassyFyComponent classyFyComponent,
+                    ClassyFySearchEngine classyFySearchEngine)
             {
-                Log.i(TAG, "Loading in background...");
-                // Get perisistence context to trigger database initialization
-                // Build Dagger2 configuration
-                if (Log.isLoggable(TAG, Log.INFO))
-                    Log.i(TAG, "ClassyFy application Dagger build");
-                DaoManager.clearCache();
-                try
-                {
-                    classyFyComponent = 
-                            DaggerClassyFyComponent.builder()
-                            .classyFyApplicationModule(new ClassyFyApplicationModule(application))
-                            .build();
-                    startApplicationSetup(classyFyComponent.persistenceContext());
-                }
-                catch (PersistenceException e)
-                {
-                    Log.e(TAG, "Database error on initialization", e);
-                    return Boolean.FALSE;
-                }
-                classyFySearchEngine = classyFyComponent.classyFySearchEngine();
-                FtsEngine ftsEngine = classyFyComponent.ftsEngine();
-                classyFySearchEngine.setFtsQuery(ftsEngine);
-                application.setComponent(classyFyComponent);
-                return Boolean.TRUE;
+                ClassyFyProvider.this.classyFyComponent = classyFyComponent;
+                ClassyFyProvider.this.classyFySearchEngine = classyFySearchEngine;
+                application.setComponent(classyFyComponent, classyFyService);
             }
-
+            
             @Override
-            public void onLoadComplete(Loader<Boolean> loader, Boolean success)
+            public void onServiceFail(String cause)
             {
-                Log.i(TAG, "Loading completed " + success);
+                Log.e(TAG, cause);
+                application.closeApplication();
+                
             }
-        };
-        starter.startLoading();
+        });
         return true;
 	}
 
@@ -126,10 +90,11 @@ public class ClassyFyProvider extends ContentProvider
 	@Override
     public void shutdown() 
 	{
-        PersistenceContext persistenceContext =
-                classyFyComponent == null ? null : classyFyComponent.persistenceContext();
-        if (persistenceContext != null)
-            persistenceContext.getDatabaseSupport().close();
+	    classyFyService.shutdown();
+        //PersistenceContext persistenceContext =
+        //        classyFyComponent == null ? null : classyFyComponent.persistenceContext();
+        //if (persistenceContext != null)
+        //    persistenceContext.getDatabaseSupport().close();
 	}
 
    /**
@@ -202,21 +167,5 @@ public class ClassyFyProvider extends ContentProvider
 	    return classyFySearchEngine.update(uri, values, selection, selectionArgs);
 	}
 
-    protected static void startApplicationSetup(PersistenceContext persistenceContext)
-    {
-        try
-        {
-            // Persistence system configured by persistence.xml contains one or more Persistence Unitst
-            // Set up named queries to find Category and Folder by Node ID
-            PersistenceAdmin persistenceAdmin = persistenceContext.getPersistenceAdmin(PU_NAME);
-            EntityByNodeIdGenerator entityByNodeIdGenerator = new EntityByNodeIdGenerator();
-            persistenceAdmin.addNamedQuery(RecordCategory.class, CATEGORY_BY_NODE_ID, entityByNodeIdGenerator);
-            persistenceAdmin.addNamedQuery(RecordFolder.class, FOLDER_BY_NODE_ID, entityByNodeIdGenerator);
-        }
-        catch (PersistenceException e)
-        {   // All SQLExceptions are rethrown as PersistenceExceptions
-            Log.e(TAG, "Database initialisation failed", e);
-        }
-    }
 
 }
