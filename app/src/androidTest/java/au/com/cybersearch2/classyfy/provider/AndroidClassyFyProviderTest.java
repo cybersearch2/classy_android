@@ -26,7 +26,6 @@ import android.database.Cursor;
 import android.support.test.runner.AndroidJUnit4;
 import android.test.ProviderTestCase2;
 import android.test.mock.MockContentResolver;
-import android.test.mock.MockContext;
 
 import au.com.cybersearch2.classyfy.ClassyFyApplication;
 import au.com.cybersearch2.classyfy.ClassyFyComponent;
@@ -44,7 +43,6 @@ public class AndroidClassyFyProviderTest extends ProviderTestCase2<ClassyFyProvi
 	public AndroidClassyFyProviderTest()
     {
 	    super(ClassyFyProvider.class, ClassyFySearchEngine.PROVIDER_AUTHORITY);
-        super.setContext(new MockContext());
     }
 
     @Before

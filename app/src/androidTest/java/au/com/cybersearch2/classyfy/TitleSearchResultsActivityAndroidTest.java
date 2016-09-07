@@ -17,39 +17,30 @@ package au.com.cybersearch2.classyfy;
 
 import static org.fest.assertions.api.Assertions.assertThat;
 
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import android.app.Activity;
 import android.app.Instrumentation;
 import android.app.SearchManager;
-import android.app.Instrumentation.ActivityMonitor;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
 import android.support.test.InstrumentationRegistry;
-import android.test.ActivityInstrumentationTestCase2;
+import android.support.test.rule.ActivityTestRule;
+import android.support.test.rule.UiThreadTestRule;
 import android.support.test.runner.AndroidJUnit4;
-import android.test.UiThreadTest;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import au.com.cybersearch2.classyfy.data.NodeEntity;
-import au.com.cybersearch2.classyfy.data.RecordCategory;
-import au.com.cybersearch2.classyfy.data.RecordFolder;
 import au.com.cybersearch2.classyfy.provider.ClassyFySearchEngine;
-import au.com.cybersearch2.classyjpa.persist.PersistenceAdmin;
-import au.com.cybersearch2.classyjpa.persist.PersistenceContext;
-import au.com.cybersearch2.classynode.EntityByNodeIdGenerator;
-import au.com.cybersearch2.classytask.WorkStatus;
-import au.com.cybersearch2.classywidget.PropertiesListAdapter;
 import au.com.cybersearch2.classywidget.ListItem;
 
 /**
@@ -58,7 +49,7 @@ import au.com.cybersearch2.classywidget.ListItem;
  * 24/07/2014
  */
 @RunWith(AndroidJUnit4.class)
-public class TitleSearchResultsActivityAndroidTest extends ActivityInstrumentationTestCase2<TitleSearchResultsActivity>
+public class TitleSearchResultsActivityAndroidTest
 {
     class NodeField
     {
@@ -117,22 +108,24 @@ public class TitleSearchResultsActivityAndroidTest extends ActivityInstrumentati
         { "identifier", "2014-1392163053802" }
     };
  
+    protected Instrumentation instrumentation;
 
-    /**
-     * 
-     */
-    public TitleSearchResultsActivityAndroidTest()
-    {
-        super(TitleSearchResultsActivity.class);
-    }
+    @Rule
+    public UiThreadTestRule uiThreadTestRule = new UiThreadTestRule();
+
+    @Rule
+    public ActivityTestRule<TitleSearchResultsActivity> activityRule = 
+        new ActivityTestRule<TitleSearchResultsActivity>(
+        		TitleSearchResultsActivity.class,
+            true,  // initialTouchMode
+            false); // launchActivity
 
     @Before
     public void setUp() throws Exception
     {
-        super.setUp();
         // Injecting the Instrumentation instance is required
         // for your test to run with AndroidJUnitRunner.
-        injectInstrumentation(InstrumentationRegistry.getInstrumentation());
+        instrumentation = InstrumentationRegistry.getInstrumentation();
         // Block until Dagger application component is available
         ClassyFyApplication.getInstance().getClassyFyComponent();
     }
@@ -140,73 +133,67 @@ public class TitleSearchResultsActivityAndroidTest extends ActivityInstrumentati
     @After
     public void tearDown() throws Exception
     {
-        super.tearDown();
     }
-    /*
-        @Test
-        public void test_parseIntent_action_view() throws Throwable
+
+    @Test
+    public void test_parseIntent_action_view() throws Throwable
+    {
+        Intent intent = getNewIntent();
+        intent.setAction(Intent.ACTION_VIEW);
+        Uri actionUri = Uri.withAppendedPath(ClassyFySearchEngine.CONTENT_URI, "3");
+        intent.setData(actionUri);
+        final TitleSearchResultsActivity activity = activityRule.launchActivity(intent);
+        synchronized(intent)
         {
-            Intent intent = getNewIntent();
-            intent.setAction(Intent.ACTION_VIEW);
-            Uri actionUri = Uri.withAppendedPath(ClassyFySearchEngine.CONTENT_URI, "3");
-            intent.setData(actionUri);
-            setActivityIntent(intent);
-            final TitleSearchResultsActivity activity = getActivity();
-            synchronized(intent)
-            {
-                intent.wait(10000);
-            }
-            ProgressBar spinner = activity.progressFragment.getSpinner();
-            assertThat(spinner).isNotNull();
-            assertThat(spinner.getVisibility()).isEqualTo(View.GONE);
-            TextView tv1 = (TextView)activity.findViewById(R.id.node_detail_title);
-            assertThat(tv1.getText()).isEqualTo("Category: " + NODE_FIELDS[2].title);
-            LinearLayout propertiesLayout = (LinearLayout)activity.findViewById(R.id.node_properties);
-            LinearLayout dynamicLayout = (LinearLayout)propertiesLayout.getChildAt(0);
-            LinearLayout titleLayout = (LinearLayout)dynamicLayout.getChildAt(0);
-            TextView titleView = (TextView) titleLayout.getChildAt(0);
-            assertThat(titleView.getText()).isEqualTo("Hierarchy");
-            ListView itemList = (ListView)dynamicLayout.getChildAt(1);
-            ListAdapter adapter = (ListAdapter)itemList.getAdapter();
-            assertThat(adapter.getCount()).isEqualTo(2);
-            ListItem listItem = (ListItem)adapter.getItem(0);
-            assertThat(listItem.getId()).isEqualTo(NODE_FIELDS[0].id);
-            assertThat(listItem.getValue()).isEqualTo(NODE_FIELDS[0].title);
-            listItem = (ListItem)adapter.getItem(1);
-            assertThat(listItem.getId()).isEqualTo(NODE_FIELDS[1].id);
-            assertThat(listItem.getValue()).isEqualTo(NODE_FIELDS[1].title);
-            dynamicLayout = (LinearLayout)propertiesLayout.getChildAt(1);
-            titleLayout = (LinearLayout)dynamicLayout.getChildAt(0);
-            titleView = (TextView) titleLayout.getChildAt(0);
-            assertThat(titleView.getText()).isEqualTo("Folders");
-            itemList = (ListView)dynamicLayout.getChildAt(1);
-            adapter = itemList.getAdapter();
-            assertThat(adapter.getCount()).isEqualTo(2);
-            listItem = (ListItem)adapter.getItem(0);
-            assertThat(listItem.getId()).isEqualTo(NODE_FIELDS[3].id);
-            assertThat(listItem.getValue()).isEqualTo(NODE_FIELDS[3].title);
-            listItem = (ListItem)adapter.getItem(1);
-            assertThat(listItem.getId()).isEqualTo(NODE_FIELDS[4].id);
-            assertThat(listItem.getValue()).isEqualTo(NODE_FIELDS[4].title);
-            dynamicLayout = (LinearLayout)propertiesLayout.getChildAt(2);
-            titleLayout = (LinearLayout)dynamicLayout.getChildAt(0);
-            titleView = (TextView) titleLayout.getChildAt(0);
-            assertThat(titleView.getText()).isEqualTo("Details");
-            itemList = (ListView)dynamicLayout.getChildAt(1);
-            adapter = itemList.getAdapter();
-            assertThat(adapter.getCount()).isEqualTo(RECORD_DETAILS_ARRAY.length);
-            for (int i = 0; i < RECORD_DETAILS_ARRAY.length; i++)
-            {
-                ListItem item = (ListItem)adapter.getItem(i);
-                assertThat(item.getName().equals(RECORD_DETAILS_ARRAY[i][0]));
-                assertThat(item.getValue().equals(RECORD_DETAILS_ARRAY[i][1]));
-            }
+            intent.wait(10000);
         }
-/* Following two tests fail with exception originating from the Kernal.
-   Test search for "~" on application worked correctly = "No record found",
-   so is likely an emulation/instrumentation issue.
- */
- /*
+        ProgressBar spinner = activity.progressFragment.getSpinner();
+        assertThat(spinner).isNotNull();
+        assertThat(spinner.getVisibility()).isEqualTo(View.GONE);
+        TextView tv1 = (TextView)activity.findViewById(R.id.node_detail_title);
+        assertThat(tv1.getText()).isEqualTo("Category: " + NODE_FIELDS[2].title);
+        LinearLayout propertiesLayout = (LinearLayout)activity.findViewById(R.id.node_properties);
+        LinearLayout dynamicLayout = (LinearLayout)propertiesLayout.getChildAt(0);
+        LinearLayout titleLayout = (LinearLayout)dynamicLayout.getChildAt(0);
+        TextView titleView = (TextView) titleLayout.getChildAt(0);
+        assertThat(titleView.getText()).isEqualTo("Hierarchy");
+        ListView itemList = (ListView)dynamicLayout.getChildAt(1);
+        ListAdapter adapter = (ListAdapter)itemList.getAdapter();
+        assertThat(adapter.getCount()).isEqualTo(2);
+        ListItem listItem = (ListItem)adapter.getItem(0);
+        assertThat(listItem.getId()).isEqualTo(NODE_FIELDS[0].id);
+        assertThat(listItem.getValue()).isEqualTo(NODE_FIELDS[0].title);
+        listItem = (ListItem)adapter.getItem(1);
+        assertThat(listItem.getId()).isEqualTo(NODE_FIELDS[1].id);
+        assertThat(listItem.getValue()).isEqualTo(NODE_FIELDS[1].title);
+        dynamicLayout = (LinearLayout)propertiesLayout.getChildAt(1);
+        titleLayout = (LinearLayout)dynamicLayout.getChildAt(0);
+        titleView = (TextView) titleLayout.getChildAt(0);
+        assertThat(titleView.getText()).isEqualTo("Folders");
+        itemList = (ListView)dynamicLayout.getChildAt(1);
+        adapter = itemList.getAdapter();
+        assertThat(adapter.getCount()).isEqualTo(2);
+        listItem = (ListItem)adapter.getItem(0);
+        assertThat(listItem.getId()).isEqualTo(NODE_FIELDS[3].id);
+        assertThat(listItem.getValue()).isEqualTo(NODE_FIELDS[3].title);
+        listItem = (ListItem)adapter.getItem(1);
+        assertThat(listItem.getId()).isEqualTo(NODE_FIELDS[4].id);
+        assertThat(listItem.getValue()).isEqualTo(NODE_FIELDS[4].title);
+        dynamicLayout = (LinearLayout)propertiesLayout.getChildAt(2);
+        titleLayout = (LinearLayout)dynamicLayout.getChildAt(0);
+        titleView = (TextView) titleLayout.getChildAt(0);
+        assertThat(titleView.getText()).isEqualTo("Details");
+        itemList = (ListView)dynamicLayout.getChildAt(1);
+        adapter = itemList.getAdapter();
+        assertThat(adapter.getCount()).isEqualTo(RECORD_DETAILS_ARRAY.length);
+        for (int i = 0; i < RECORD_DETAILS_ARRAY.length; i++)
+        {
+            ListItem item = (ListItem)adapter.getItem(i);
+            assertThat(item.getName().equals(RECORD_DETAILS_ARRAY[i][0]));
+            assertThat(item.getValue().equals(RECORD_DETAILS_ARRAY[i][1]));
+        }
+    }
+
     @Test
     public void test_action_view_no_nodeid() throws Throwable
     {
@@ -226,7 +213,7 @@ public class TitleSearchResultsActivityAndroidTest extends ActivityInstrumentati
         Uri uri = Uri.withAppendedPath(ClassyFySearchEngine.CONTENT_URI, String.valueOf(Integer.MAX_VALUE));
         do_action_view_bad_url(uri);
     }
-*/
+
     @Test
     public void test_action_search_fail() throws Throwable
     {
@@ -235,12 +222,8 @@ public class TitleSearchResultsActivityAndroidTest extends ActivityInstrumentati
 
     protected void do_action_view_bad_url(Uri uri) throws Throwable
     {
-        final Intent intent = getNewIntent();
-        intent.setAction(Intent.ACTION_VIEW);
-        //intent.putExtra(SearchManager.QUERY, Uri.withAppendedPath(ClassyFySearchEngine.CONTENT_URI, ).toString());
-        setActivityIntent(intent);
-        final TitleSearchResultsActivity activity = getActivity();
-        runTestOnUiThread(new Runnable() {
+        final TitleSearchResultsActivity activity =  activityRule.launchActivity(new Intent());
+        uiThreadTestRule.runOnUiThread(new Runnable() {
             public void run() {
                 TextView tv1 = (TextView) activity.findViewById(R.id.node_detail_title);
                 // Populate fields to test they are cleared when the error occurs
@@ -250,15 +233,17 @@ public class TitleSearchResultsActivityAndroidTest extends ActivityInstrumentati
                 propertiesLayout.addView(createDynamicLayout("Categories", activity));
             }
         });
+        final Intent intent = new Intent();
+        intent.setAction(Intent.ACTION_VIEW);
         intent.setData(uri);
-        runTestOnUiThread(new Runnable() {
+        uiThreadTestRule.runOnUiThread(new Runnable() {
             public void run() {
                 activity.onNewIntent(intent);
             }});
         synchronized (intent) {
             intent.wait(10000);
         }
-        runTestOnUiThread(new Runnable() {
+        uiThreadTestRule.runOnUiThread(new Runnable() {
             public void run() {
 		        ProgressBar spinner = activity.progressFragment.getSpinner();
 		        assertThat(spinner).isNotNull();
@@ -273,9 +258,8 @@ public class TitleSearchResultsActivityAndroidTest extends ActivityInstrumentati
     protected void do_action_search_fail(String searchQuery) throws Throwable {
         final Intent intent = getNewIntent();
         intent.setAction(Intent.ACTION_VIEW);
-        setActivityIntent(intent);
-        final TitleSearchResultsActivity activity = getActivity();
-        runTestOnUiThread(new Runnable() {
+        final TitleSearchResultsActivity activity =  activityRule.launchActivity(intent);
+        uiThreadTestRule.runOnUiThread(new Runnable() {
             public void run() {
                 TextView tv1 = (TextView) activity.findViewById(R.id.node_detail_title);
                 // Populate fields to test they are cleared when the error occurs
@@ -287,7 +271,7 @@ public class TitleSearchResultsActivityAndroidTest extends ActivityInstrumentati
         });
         intent.setAction(Intent.ACTION_SEARCH);
         intent.putExtra(SearchManager.QUERY, searchQuery);
-        runTestOnUiThread(new Runnable() {
+        uiThreadTestRule.runOnUiThread(new Runnable() {
             public void run() {
                 activity.onNewIntent(intent);
             }
@@ -295,7 +279,7 @@ public class TitleSearchResultsActivityAndroidTest extends ActivityInstrumentati
         synchronized (intent) {
             intent.wait(10000);
         }
-        runTestOnUiThread(new Runnable() {
+        uiThreadTestRule.runOnUiThread(new Runnable() {
             public void run() {
 		        ProgressBar spinner = activity.progressFragment.getSpinner();
 		        assertThat(spinner).isNotNull();
@@ -311,8 +295,8 @@ public class TitleSearchResultsActivityAndroidTest extends ActivityInstrumentati
     private View createDynamicLayout(String title, Activity activity) {
         LinearLayout dynamicLayout = new LinearLayout(activity);
         dynamicLayout.setOrientation(LinearLayout.VERTICAL);
-        int layoutHeight = LinearLayout.LayoutParams.MATCH_PARENT;
-        int layoutWidth = LinearLayout.LayoutParams.MATCH_PARENT;
+        //int layoutHeight = LinearLayout.LayoutParams.MATCH_PARENT;
+        //int layoutWidth = LinearLayout.LayoutParams.MATCH_PARENT;
         TextView titleView = new TextView(activity);
         titleView.setText(title);
         titleView.setTextColor(Color.BLUE);

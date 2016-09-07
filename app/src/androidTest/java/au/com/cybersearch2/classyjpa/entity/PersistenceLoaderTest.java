@@ -17,14 +17,17 @@ package au.com.cybersearch2.classyjpa.entity;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import static org.fest.assertions.api.Assertions.assertThat;
 
 import javax.persistence.EntityExistsException;
+
+import android.app.Instrumentation;
 import android.support.test.InstrumentationRegistry;
-import android.test.InstrumentationTestCase;
+import android.support.test.rule.UiThreadTestRule;
 import android.support.test.runner.AndroidJUnit4;
 import au.com.cybersearch2.classyfy.ClassyFyApplication;
 import au.com.cybersearch2.classyfy.ClassyFyComponent;
@@ -40,30 +43,32 @@ import au.com.cybersearch2.classyutil.Transcript;
  * 16/07/2014
  */
 @RunWith(AndroidJUnit4.class)
-public class PersistenceLoaderTest extends InstrumentationTestCase
+public class PersistenceLoaderTest
 {
     protected PersistenceLoader testUserTransLoaderTask;
     protected ClassyFyComponent component;
+    protected Instrumentation instrumentation;
+
+    @Rule
+    public UiThreadTestRule uiThreadTestRule = new UiThreadTestRule();
 
     @Before
     public void setUp() throws Exception
     {
-        super.setUp();
-        injectInstrumentation(InstrumentationRegistry.getInstrumentation());
+        instrumentation = InstrumentationRegistry.getInstrumentation();
         component = ClassyFyApplication.getInstance().getClassyFyComponent();
     }
 
     @After
     public void tearDown() throws Exception
     {
-        super.tearDown();
     }
 
 
     private Executable doWork(PersistenceWork persistenceWork)
     {
         PersistenceLoader testLoaderTask =
-                new PersistenceLoader(getInstrumentation().getContext(), component.persistenceContext());
+                new PersistenceLoader(instrumentation.getContext(), component.persistenceContext());
         return testLoaderTask.execute(ClassyFyProvider.PU_NAME, persistenceWork);
     }
 
@@ -75,7 +80,7 @@ public class PersistenceLoaderTest extends InstrumentationTestCase
     	Transcript transcript = new Transcript();
         final PersistenceWork persistenceWork = new TestPersistenceWork(transcript);
         final Executable[] exeHolder = new Executable[1];
-        runTestOnUiThread(new Runnable() {
+        uiThreadTestRule.runOnUiThread(new Runnable() {
             public void run()
             {
                  exeHolder[0] = doWork(persistenceWork);
@@ -101,7 +106,7 @@ public class PersistenceLoaderTest extends InstrumentationTestCase
                         return false;
                     }});
         final Executable[] exeHolder = new Executable[1];
-        runTestOnUiThread(new Runnable() {
+        uiThreadTestRule.runOnUiThread(new Runnable() {
             public void run()
             {
                 exeHolder[0] = doWork(persistenceWork);
@@ -126,7 +131,7 @@ public class PersistenceLoaderTest extends InstrumentationTestCase
                         throw persistException;
                     }});
         final Executable[] exeHolder = new Executable[1];
-        runTestOnUiThread(new Runnable() {
+        uiThreadTestRule.runOnUiThread(new Runnable() {
             public void run()
             {
                 exeHolder[0] = doWork(persistenceWork);

@@ -19,21 +19,21 @@ import static org.fest.assertions.api.Assertions.assertThat;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
+import org.junit.Rule;
+import static org.junit.Assert;
 import org.junit.runner.RunWith;
 
-import android.annotation.TargetApi;
 import android.app.Instrumentation;
 import android.app.Instrumentation.ActivityMonitor;
 import android.app.SearchManager;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Build;
+import android.net.Uri;
 import android.support.test.InstrumentationRegistry;
-import android.support.test.rule.ActivityTestRule;
 import android.support.test.runner.AndroidJUnit4;
+import android.support.test.rule.ActivityTestRule;
 
 import static android.support.test.espresso.Espresso.onView;
 import static android.support.test.espresso.action.ViewActions.click;
@@ -45,8 +45,6 @@ import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import au.com.cybersearch2.classyfy.provider.ClassyFySearchEngine;
-import au.com.cybersearch2.classytask.WorkStatus;
 import au.com.cybersearch2.classywidget.PropertiesListAdapter;
 import au.com.cybersearch2.classywidget.ListItem;
 
@@ -58,18 +56,6 @@ import au.com.cybersearch2.classywidget.ListItem;
 @RunWith(AndroidJUnit4.class)
 public class MainActivityAndroidTest
 {
-    @Rule
-    public ActivityTestRule<MainActivity> activityRule = new ActivityTestRule<MainActivity>(MainActivity.class);
-
-    private static final String[][] RECORD_DETAILS_ARRAY =
-    {
-        { "description", "" },
-        { "created", "2014-02-12 10:58:00.000000" },
-        { "creator", "admin" },
-        { "modified", "2014-02-12 11:28:35.000000" },
-        { "modifier", "admin" },
-        { "identifier", "2014-1392163053802" }
-    };
  
     private static final String[][] INF_LIST =
     {
@@ -92,13 +78,21 @@ public class MainActivityAndroidTest
 
 
     protected Context context;
-   
+    protected Instrumentation instrumentation;
+ 
+    @Rule
+    public ActivityTestRule<MainActivity> activityRule = 
+        new ActivityTestRule<MainActivity>(
+            MainActivity.class,
+            true,  // initialTouchMode
+            true); // launchActivity
+
     @Before
     public void setUp() throws Exception
     {
         // Injecting the Instrumentation instance is required
         // for your test to run with AndroidJUnitRunner.
-        injectInstrumentation(InstrumentationRegistry.getInstrumentation());
+        instrumentation = InstrumentationRegistry.getInstrumentation();
     }
 
     @After
@@ -109,12 +103,9 @@ public class MainActivityAndroidTest
     @Test
     public void test_search() throws Throwable
     {
-        final MainActivity mainActivity = getActivity();
+        final MainActivity mainActivity = activityRule.getActivity();
         // Block until Dagger application component is available
         ClassyFyApplication.getInstance().getClassyFyComponent();
-        // Check that ContentProvider is available for search operations
-        ContentResolver contentResolver  = mainActivity.getContentResolver();
-        assertThat(contentResolver.getType(ClassyFySearchEngine.CONTENT_URI)).isEqualTo("vnd.android.cursor.dir/vnd.classyfy.node");
         // Wait up to 10 seconds for start completion
         for (int i = 0; i < 10; i++)
         {
@@ -125,6 +116,11 @@ public class MainActivityAndroidTest
             Thread.sleep(1000);
         }
         assertThat(mainActivity.startState == StartState.run);
+        // Check that ContentProvider is available for search operations
+        ContentResolver contentResolver  = mainActivity.getContentResolver();
+        Uri CONTENT_URI = 
+                Uri.parse("content://au.com.cybersearch2.classyfy.ClassyFyProvider/all_nodes");
+        assertThat(contentResolver.getType(CONTENT_URI)).isEqualTo("vnd.android.cursor.dir/vnd.classyfy.node");
         LinearLayout categoryLayout = (LinearLayout) mainActivity.findViewById(R.id.top_category);
         LinearLayout dynamicLayout = (LinearLayout)categoryLayout.getChildAt(0);
         LinearLayout titleLayout = (LinearLayout)dynamicLayout.getChildAt(0);
@@ -139,7 +135,6 @@ public class MainActivityAndroidTest
             assertThat(listItem.getValue()).isEqualTo(TOP_CATS[i]);
             assertThat(listItem.getId()).isGreaterThan(1);
         }
-        Instrumentation instrumentation = getInstrumentation();
         ActivityMonitor am2 = instrumentation.addMonitor(TitleSearchResultsActivity.class.getName(), null, false);
         onView(withId(au.com.cybersearch2.classyfy.R.id.action_search)).perform(click());
         // Can't find right expression for text view id
@@ -148,7 +143,7 @@ public class MainActivityAndroidTest
         instrumentation.sendCharacterSync(KeyEvent.KEYCODE_N); 
         instrumentation.sendCharacterSync(KeyEvent.KEYCODE_F);
         instrumentation.sendCharacterSync(KeyEvent.KEYCODE_ENTER);
-        TitleSearchResultsActivity titleSearchResultsActivity = (TitleSearchResultsActivity) getInstrumentation().waitForMonitorWithTimeout(am2, 5000);
+        TitleSearchResultsActivity titleSearchResultsActivity = (TitleSearchResultsActivity) instrumentation.waitForMonitorWithTimeout(am2, 5000);
         assertThat(titleSearchResultsActivity).isNotNull();
         Intent intent = titleSearchResultsActivity.getIntent();
         synchronized(intent)
@@ -173,11 +168,5 @@ public class MainActivityAndroidTest
             assertThat(INF_LIST[i][1]).isEqualTo(listItem.getValue());
         }
     }
-
-    private Intent getNewIntent()
-    {
-        Intent intent = new Intent();
-        return intent;
-    }
-
+    
 }
