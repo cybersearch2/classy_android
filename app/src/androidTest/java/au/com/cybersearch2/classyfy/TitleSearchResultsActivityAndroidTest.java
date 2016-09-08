@@ -147,6 +147,7 @@ public class TitleSearchResultsActivityAndroidTest
         {
             intent.wait(10000);
         }
+        instrumentation.waitForIdleSync();
         ProgressBar spinner = activity.progressFragment.getSpinner();
         assertThat(spinner).isNotNull();
         assertThat(spinner.getVisibility()).isEqualTo(View.GONE);
@@ -243,16 +244,29 @@ public class TitleSearchResultsActivityAndroidTest
         synchronized (intent) {
             intent.wait(10000);
         }
-        uiThreadTestRule.runOnUiThread(new Runnable() {
+        instrumentation.waitForIdle(new Runnable() {
+            @Override
             public void run() {
-		        ProgressBar spinner = activity.progressFragment.getSpinner();
-		        assertThat(spinner).isNotNull();
-		        assertThat(spinner.getVisibility()).isEqualTo(View.GONE);
-		        TextView tv1 = (TextView) activity.findViewById(R.id.node_detail_title);
-		        assertThat(tv1.getText()).isEqualTo("Record not found");
-		        LinearLayout propertiesLayout = (LinearLayout) activity.findViewById(R.id.node_properties);
-		        assertThat(propertiesLayout.getChildCount()).isEqualTo(0);
-            }});
+
+                try
+                {
+                    uiThreadTestRule.runOnUiThread(new Runnable() {
+                        public void run() {
+                            ProgressBar spinner = activity.progressFragment.getSpinner();
+                            assertThat(spinner).isNotNull();
+                            assertThat(spinner.getVisibility()).isEqualTo(View.GONE);
+                            TextView tv1 = (TextView) activity.findViewById(R.id.node_detail_title);
+                            assertThat(tv1.getText()).isEqualTo("Record not found");
+                            LinearLayout propertiesLayout = (LinearLayout) activity.findViewById(R.id.node_properties);
+                            assertThat(propertiesLayout.getChildCount()).isEqualTo(0);
+                        }
+                    });
+                }
+                catch (Throwable e)
+                {
+                }
+            }
+        });
     }
 
     protected void do_action_search_fail(String searchQuery) throws Throwable {
@@ -279,6 +293,7 @@ public class TitleSearchResultsActivityAndroidTest
         synchronized (intent) {
             intent.wait(10000);
         }
+        instrumentation.waitForIdleSync();
         uiThreadTestRule.runOnUiThread(new Runnable() {
             public void run() {
 		        ProgressBar spinner = activity.progressFragment.getSpinner();
