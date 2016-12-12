@@ -106,8 +106,8 @@ public class MainActivityAndroidTest
         final MainActivity mainActivity = activityRule.getActivity();
         // Block until Dagger application component is available
         ClassyFyApplication.getInstance().getClassyFyComponent();
-        // Wait up to 10 seconds for start completion
-        for (int i = 0; i < 10; i++)
+        // Wait up to 20 seconds for start completion
+        for (int i = 0; i < 20; i++)
         {
             if (mainActivity.startState == StartState.run)
                 break;
