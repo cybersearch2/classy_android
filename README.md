@@ -1,6 +1,6 @@
 # classy_android
 
-Classy Tools "ClassyFy" Android Sample Application in Gradle project suite
+Classy Data "ClassyFy" Android Sample Application in Gradle project suite
 
 For information on Classy Android and install instructions, go to our support site at www.cybersearch2.com.au/develop.
 
