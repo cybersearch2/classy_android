@@ -41,7 +41,6 @@ import org.robolectric.RuntimeEnvironment;
 import org.robolectric.Shadows;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowActivity;
-import org.robolectric.shadows.ShadowContentResolver;
 import org.robolectric.shadows.ShadowToast;
 
 import android.app.SearchManager;
@@ -81,7 +80,7 @@ import au.com.cybersearch2.classywidget.ListItem;
  * 29/04/2014
  */
 @RunWith(RobolectricTestRunner.class)
-@Config(constants = BuildConfig.class, sdk = 23)
+@Config(constants = BuildConfig.class, sdk = 25)
 public class TitleSearchResultsActivityTest
 {
     class TestTicketManager extends TicketManager
@@ -267,10 +266,14 @@ public class TitleSearchResultsActivityTest
         TestClassyFyApplication testClassyFyApplication = TestClassyFyApplication.getTestInstance();
         testClassyFyComponent = new TestClassyFyComponent();
         testClassyFyApplication.setTestClassyFyComponent(testClassyFyComponent);
+        // ShadowContentResolver.registerProvider() Deprecated version 3.2
         // Register the ContentProvider
-        ContentProvider provider = mock(ContentProvider.class);
-        when(provider.getType(ClassyFySearchEngine.CONTENT_URI)).thenReturn(ClassyFySearchEngine.CONTENT_URI.toString());
-        ShadowContentResolver.registerProvider(ClassyFySearchEngine.PROVIDER_AUTHORITY, provider);
+        //ContentProvider provider = mock(ContentProvider.class);
+        //when(provider.getType(ClassyFySearchEngine.CONTENT_URI)).thenReturn(ClassyFySearchEngine.CONTENT_URI.toString());
+        //ShadowContentResolver.registerProvider(ClassyFySearchEngine.PROVIDER_AUTHORITY, provider);
+        ProviderInfo providerInfo = new ProviderInfo();
+        providerInfo.authority = ClassyFySearchEngine.PROVIDER_AUTHORITY;
+        Robolectric.buildContentProvider(ClassyFyProvider.class).create(providerInfo).get();
 }
 
     @After

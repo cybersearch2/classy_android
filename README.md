@@ -1,6 +1,6 @@
 # classy_android
 
-Classy Tools "ClassyFy" Android Sample Application in Maven project suite
+Classy Tools "ClassyFy" Android Sample Application in Gradle project suite
 
 For information on Classy Android and install instructions, go to our support site at www.cybersearch2.com.au/develop.
 
@@ -10,7 +10,7 @@ It showcases Classy Tools separate Android library which provides an Android SQL
 and other features including an Android-specific Persistence Container 
 and a Fast Text Search engine to support automatic search suggestions.
 
-It also provides an example of Android development using Gradle Robolectric and Android Studio  
+It also provides an example of Android development using Gradle, Robolectric and Android Studio  
 
 Classy Tools features
 
